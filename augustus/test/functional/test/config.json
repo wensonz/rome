@@ -1,0 +1,22 @@
+{
+    "apiServer": "10.210.226.159:3000",
+    "db": {
+        "mongodb": {
+            "host":"mongodbtest.rome.cluster.sina.com.cn",
+            "port":9010,
+            "repl_options":{"rs_name": "rometest"},
+            "server_options": {},
+            "db_options": {}
+        },
+        "rmap": {
+            "counter": {"dbname": "counter", "collection": "counter" },
+            "tag": {"dbname": "configuration", "collection": "tag" },
+            "role": {"dbname": "configuration", "collection": "role" },
+            "role_history": {"dbname": "configuration", "collection": "role_history" },
+            "node": {"dbname": "configuration", "collection": "node" },
+            "node_history": {"dbname": "configuration", "collection": "node_history" },
+            "template": {"dbname": "configuration", "collection": "template" },
+            "template_history": {"dbname": "configuration", "collection": "tempalte_history" }
+        }
+    }
+}

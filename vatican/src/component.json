@@ -1,0 +1,24 @@
+{
+    "router": {
+        "params": {
+            "1": {
+                "data.configuration": "handlers.data.configuration"
+            }
+        }
+    },
+    "handlers.data.configuration": {
+        "type": "caligula.handlers.DataHandler",
+        "params": {
+            "1": { "value": {}},
+            "2": { "reference": "configuration-connection-factory" }
+        }
+    },
+    "configuration-connection-factory": {
+        "type": "caligula.db.mongo.MongoConnectionFactory",
+        "params": {
+            "1": { "value": {
+                "url": "mongodb://localhost/configuration"
+            }}
+        }
+    }
+}

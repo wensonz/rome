@@ -1,0 +1,13 @@
+{
+    "router": {
+        "params": {
+            "0": { "value": {
+                "configuration": "handlers.configuration"
+            }}
+        }
+    },
+    "handlers.configuration": {
+        "type": "caligula.handlers.ConfigurationHandler",
+        "params": {}
+    }
+}

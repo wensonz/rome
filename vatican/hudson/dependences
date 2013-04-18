@@ -1,0 +1,2 @@
+OS = centos5.4
+packages = sinasrv2-node sinasrv2-mocha sinasrv2-rome-log4js sinasrv2-rome-q jscoverage sinasrv2-rpm-build-env

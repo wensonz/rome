@@ -1,0 +1,1 @@
+packages = jscoverage sinasrv2-node sinasrv2-mocha sinasrv2-rome-log4js sinasrv2-rome-request sinasrv2-rome-natives sinasrv2-rome-async sinasrv2-rome-should sinasrv2-rome-dust sinasrv2-rome-rome-client sinasrv2-rpm-build-env

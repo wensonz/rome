@@ -1,0 +1,941 @@
+[
+    {
+    "api": "/vatican/test1/create",
+    "cases": [
+        {
+            "description": "should get response when insert some data.",
+            "input": {
+                "url": "/vatican/test1/create",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "test": "test"
+                }
+            },
+            "data": {"test": "test"},
+            "output": {"affected": 1 },
+            "result": {"test": "test"}
+        },
+        {
+            "description": "should get error response without correspond HTTP Method.",
+            "input": {
+                "url": "/vatican/test1/create",
+                "method": "GET",
+                "json": true,
+                "body": {
+                    "test": "test"
+                }
+            },
+            "data": {"test": "test"},
+            "output": "405",
+            "result": {"test": "test"}
+        }
+    ]
+    },
+    {
+    "api": "/vatican/test2/create",
+    "cases": [
+        {
+            "description": "should get response when insert some data.",
+            "input": {
+                "url": "/vatican/test2/create",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "test": "test"
+                }
+            },
+            "data": {"test": "test"},
+            "output": {"affected": 1 },
+            "result": {"test": "test"}
+        },
+        {
+            "description": "should get error response without correspond HTTP Method.",
+            "input": {
+                "url": "/vatican/test2/create",
+                "method": "GET",
+                "json": true,
+                "body": {
+                    "test": "test"
+                }
+            },
+            "data": {"test": "test"},
+            "output": "405",
+            "result": {"test": "test"}
+        }
+    ]
+    },
+    {
+    "api": "/vatican/test1/read",
+    "cases": [
+        {
+            "description": "should get error response when criteria is null.",
+            "input": {
+                "url": "/vatican/test1/read",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "test": "test"
+                }
+            },
+            "data": {"test": "test"},
+            "output": "1001",
+            "result": {}
+        },
+        {
+            "description": "should get error response without correspond HTTP Method.",
+            "input": {
+                "url": "/vatican/test1/read",
+                "method": "GET",
+                "json": true,
+                "body": {
+                    "test": "test"
+                }
+            },
+            "data": {"test": "test"},
+            "output": "405",
+            "result": {"test": "test"}
+        },
+        {
+            "description": "should get response with a vliad criteria.",
+            "input": {
+                "url": "/vatican/test1/read",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "criteria": {
+                        "test": "test"
+                    },
+                    "fields": {
+                        "test": 1,
+                        "_id":0
+                    }
+                }
+            },
+            "data": {"test": "test"},
+            "output": {"affected":1,"data":[{"test":"test"}]},
+            "result": {"test": "test"}
+        },
+        {
+            "description": "should get error response with an invliad criteria.",
+            "input": {
+                "url": "/vatican/test1/read",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "in-criteria": {
+                        "test": "test"
+                    },
+                    "fields": {
+                        "test": 1,
+                        "_id":0
+                    }
+                }
+            },
+            "data": {},
+            "output": "1001",
+            "result": {}
+        },
+        {
+            "description": "should get error response with an invliad criteria and HTTP Method.",
+            "input": {
+                "url": "/vatican/test1/read",
+                "method": "GET",
+                "json": true,
+                "body": {
+                    "in-criteria": {
+                        "test": "test"
+                    },
+                    "fields": {
+                        "test": 1,
+                        "_id":0
+                    }
+                }
+            },
+            "data": {},
+            "output": "405",
+            "result": {}
+        },
+        {
+            "description": "should get error, if operations.group isn't object",
+            "input": {
+                "url": "/vatican/test1/read",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "operations": {"group": {"group_by": 1}}
+                }
+            },
+            "output": "1001"
+        },
+        {
+            "description": "should get error, if operations.max isn't object",
+            "input": {
+                "url": "/vatican/test1/read",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "operations": {"group": {"group_by": "", "max": 1}}
+                }
+            },
+            "output": "1001"
+        },
+        {
+            "description": "prepare data for groupby",
+            "input": {
+                "url": "/vatican/test1/create",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "name": "10.71.10.11",
+                    "revision" : 15,
+                    "tag": "groupby"
+                }
+            },
+            "output": {"affected": 1}
+        },
+        {
+            "description": "prepare data for groupby",
+            "input": {
+                "url": "/vatican/test1/create",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "name": "10.71.10.11",
+                    "revision" : 16,
+                    "tag": "groupby"
+                }
+            },
+            "output": {"affected": 1}
+        },
+        {
+            "description": "prepare data for groupby",
+            "input": {
+                "url": "/vatican/test1/create",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "name": "10.71.10.12",
+                    "revision" : 15,
+                    "tag": "groupby"
+                }
+            },
+            "output": {"affected": 1}
+        },
+        {
+            "description": "prepare data for groupby",
+            "input": {
+                "url": "/vatican/test1/create",
+                "method": "POST",
+                "json": true,
+                "body": {
+                     "name": "10.71.10.12",
+                     "revision" : 19,
+                     "tag": "groupby"
+                }
+            },
+            "output": {"affected": 1}
+        },
+        {
+            "description": "prepare data for groupby",
+            "input": {
+                "url": "/vatican/test1/create",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "name": "10.71.10.11",
+                    "revision" : 12,
+                    "tag": "groupby"
+                }
+            },
+            "output": {"affected": 1}
+        },
+        {
+            "description": "should get correct result.",
+            "input": {
+                "url": "/vatican/test1/read",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "criteria": {
+                        "revision": {
+                            "$lt": 21
+                        }
+                    },
+                    "operations": {
+                        "group": {
+                            "group_by": "name",
+                            "max": "revision"
+                        }
+                    }
+                }
+            },
+            "output": {
+                "affected": 2,
+                "data": [
+                    {
+                        "name":"10.71.10.11",
+                         "revision":16,
+                         "tag":"groupby"
+                    },{
+                        "name":"10.71.10.12",
+                        "revision":19,
+                        "tag":"groupby"
+                    }
+                ]
+            }
+        },
+        {
+            "description": "clear data for group by test",
+            "input": {
+                "url": "/vatican/test1/delete",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "criteria": {
+                        "tag": "groupby"
+                    }
+                }
+            },
+            "output": {"affected": 5 }
+        },
+        {
+            "description": "prepare data for read-limit",
+            "input": {
+                "url": "/vatican/test1/create",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "test_limit": "read-limit"
+                }
+            },
+            "output": {"affected": 1}
+        },
+        {
+            "description": "prepare data for read-limit",
+            "input": {
+                "url": "/vatican/test1/create",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "test_limit": "read-limit2"
+                }
+            },
+            "output": {"affected": 1}
+        },
+        {
+            "description": "should get correct result with limit & skip",
+            "input": {
+                "url": "/vatican/test1/read",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "criteria": {
+                        "test_limit": {"$exists": true}
+                    },
+                    "operations": {
+                        "limit": 1,
+                        "skip": 1
+                    }
+                }
+            },
+            "output": {
+                "affected": 2,
+                "data": [
+                    {"test_limit": "read-limit2"}
+                ]
+            }
+        },
+        {
+            "description": "clear data for read-limit test",
+            "input": {
+                "url": "/vatican/test1/delete",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "criteria": {
+                        "test_limit": {"$exists": true}
+                    }
+                }
+            },
+            "output": {"affected": 2 }
+        }
+    ]
+    },
+    {
+    "api": "/vatican/test2/read",
+    "cases": [
+        {
+            "description": "should get error response when criteria is null.",
+            "input": {
+                "url": "/vatican/test2/read",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "test": "test"
+                }
+            },
+            "data": {"test": "test"},
+            "output": "1001",
+            "result": {}
+        },
+        {
+            "description": "should get error response without correspond HTTP Method.",
+            "input": {
+                "url": "/vatican/test2/read",
+                "method": "GET",
+                "json": true,
+                "body": {
+                    "test": "test"
+                }
+            },
+            "data": {"test": "test"},
+            "output": "405",
+            "result": {"test": "test"}
+        },
+        {
+            "description": "should get response with a vliad criteria.",
+            "input": {
+                "url": "/vatican/test2/read",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "criteria": {
+                        "test": "test"
+                    },
+                    "fields": {
+                        "test": 1,
+                        "_id":0
+                    }
+                }
+            },
+            "data": {"test": "test"},
+            "output": {"affected":1,"data":[{"test":"test"}]},
+            "result": {"test": "test"}
+        },
+        {
+            "description": "should get error response with an invliad criteria.",
+            "input": {
+                "url": "/vatican/test2/read",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "in-criteria": {
+                        "test": "test"
+                    },
+                    "fields": {
+                        "test": 1,
+                        "_id":0
+                    }
+                }
+            },
+            "data": {},
+            "output": "1001",
+            "result": {}
+        },
+        {
+            "description": "should get error response with an invliad criteria and HTTP Method.",
+            "input": {
+                "url": "/vatican/test2/read",
+                "method": "GET",
+                "json": true,
+                "body": {
+                    "in-criteria": {
+                        "test": "test"
+                    },
+                    "fields": {
+                        "test": 1,
+                        "_id":0
+                    }
+                }
+            },
+            "data": {},
+            "output": "405",
+            "result": {}
+        }
+    ]
+    },
+    {
+    "api": "/vatican/test1/update",
+    "cases": [
+        {
+            "description": "should get response with a valid criteria.",
+            "input": {
+                "url": "/vatican/test1/update",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "criteria": {
+                        "test": "test"
+                    },
+                    "update": {
+                        "$set": {
+                            "test": "test2"
+                        }
+                    }
+                }
+            },
+            "data": {"test": "test2"},
+            "output": {"affected": 1 },
+            "result": {"test": "test2"}
+        },
+        {
+            "description": "should get response with a valid criteria and non-exist criteria.",
+            "input": {
+                "url": "/vatican/test1/update",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "criteria": {
+                        "test": "testtest"
+                    },
+                    "update": {
+                        "$set": {
+                            "test": "test2"
+                        }
+                    }
+                }
+            },
+            "data": {"test": "testtest"},
+            "output": {"affected": 0 },
+            "result": {}
+        },
+        {
+            "description": "should get response with an invalid criteria.",
+            "input": {
+                "url": "/vatican/test1/update",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "in-criteria": {
+                        "test": "test"
+                    },
+                    "update": {
+                        "$set": {
+                            "test": "test2"
+                        }
+                    }
+                }
+            },
+            "data": {"test": "test2"},
+            "output": "1001",
+            "result": {"test": "test2"}
+        },
+        {
+            "description": "should get error response without correspond HTTP Method.",
+            "input": {
+                "url": "/vatican/test1/update",
+                "method": "GET",
+                "json": true,
+                "body": {
+                    "test": "test"
+                }
+            },
+            "data": {"test": "test"},
+            "output": "405",
+            "result": {"test": "test"}
+        }
+    ]
+    },
+    {
+    "api": "/vatican/test2/update",
+    "cases": [
+        {
+            "description": "should get response with a valid criteria.",
+            "input": {
+                "url": "/vatican/test2/update",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "criteria": {
+                        "test": "test"
+                    },
+                    "update": {
+                        "$set": {
+                            "test": "test2"
+                        }
+                    }
+                }
+            },
+            "data": {"test": "test2"},
+            "output": {"affected": 1 },
+            "result": {"test": "test2"}
+        },
+        {
+            "description": "should get response with a valid criteria and non-exist criteria.",
+            "input": {
+                "url": "/vatican/test2/update",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "criteria": {
+                        "test": "testtest"
+                    },
+                    "update": {
+                        "$set": {
+                            "test": "test2"
+                        }
+                    }
+                }
+            },
+            "data": {"test": "testtest"},
+            "output": {"affected": 0 },
+            "result": {}
+        },
+        {
+            "description": "should get response with an invalid criteria.",
+            "input": {
+                "url": "/vatican/test2/update",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "in-criteria": {
+                        "test": "test"
+                    },
+                    "update": {
+                        "$set": {
+                            "test": "test2"
+                        }
+                    }
+                }
+            },
+            "data": {"test": "test2"},
+            "output": "1001",
+            "result": {"test": "test2"}
+        },
+        {
+            "description": "should get error response without correspond HTTP Method.",
+            "input": {
+                "url": "/vatican/test2/update",
+                "method": "GET",
+                "json": true,
+                "body": {
+                    "test": "test"
+                }
+            },
+            "data": {"test": "test"},
+            "output": "405",
+            "result": {"test": "test"}
+        }
+    ]
+    },
+    {
+    "api": "/vatican/test1/cas",
+    "cases": [
+        {
+            "description": "should get error response if with invliad http method",
+            "input": {
+                "url": "/vatican/test1/cas",
+                "method": "GET",
+                "json": true,
+                "body": {
+                    "test": "test"
+                }
+            },
+            "output": "405"
+        },
+        {
+            "description": "should get error if with invliad compare",
+            "input": {
+                "url": "/vatican/test1/cas",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "compare": 1
+                }
+            },
+            "output": "1001"
+        },
+        {
+            "description": "should get error if with invliad set",
+            "input": {
+                "url": "/vatican/test1/cas",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "compare": {},
+                    "set": 1
+                }
+            },
+            "output": "1001"
+        },
+        {
+            "description": "should get correct response",
+            "input": {
+                "url": "/vatican/test1/cas",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "compare": {"test":"test2"},
+                    "set": {"test": 100}
+                }
+            },
+            "output": {"affected":1, "data":{"test":"test2"}},
+            "data": {"test": 100},
+            "result": {"test": 100}
+        }
+    ]
+    },
+    {
+    "api": "/vatican/counter",
+    "cases": [
+        {
+            "description": "should get error response if with invliad http method",
+            "input": {
+                "url": "/vatican/counter",
+                "method": "GET",
+                "json": true,
+                "body": {}
+            },
+            "output": "405"
+        },
+        {
+            "description": "should get error if body.name isn't a string",
+            "input": {
+                "url": "/vatican/counter",
+                "method": "POST",
+                "json": true,
+                "body": {}
+            },
+            "output": "1001"
+        },
+        {
+            "description": "should get error if can't find matched counter",
+            "input": {
+                "url": "/vatican/counter",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "name": "not_exist"
+                }
+            },
+            "output": "1002"
+        },
+        {
+            "description": "should get correct response",
+            "input": {
+                "url": "/vatican/counter",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "name": "not_exist"
+                }
+            },
+            "output": "1002"
+        },
+        {
+            "description": "JUST create a counter",
+            "input": {
+                "url": "/vatican/counter/create",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "name": "test_counter",
+                    "value": 1
+                }
+            },
+            "output": {"affected": 1 },
+            "data": {"name": "test_counter"},
+            "result": {
+                    "name": "test_counter",
+                    "value": 1
+            }
+        },
+        {
+            "description": "should get correct response",
+            "input": {
+                "url": "/vatican/counter",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "name": "test_counter"
+                }
+            },
+            "output": {"affected": 1, "data":{"name":"test_counter","value":1}},
+            "data": {"name": "test_counter"},
+            "result": {
+                    "name": "test_counter",
+                    "value": 2
+            }
+        },
+        {
+            "description": "should get correct response with step",
+            "input": {
+                "url": "/vatican/counter",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "name": "test_counter",
+                    "step": 100
+                }
+            },
+            "output": {"affected": 1, "data":{"name":"test_counter","value":2}},
+            "data": {"name": "test_counter"},
+            "result": {
+                    "name": "test_counter",
+                    "value": 102
+            }
+        },
+        {
+            "description": "JUST delete the test counter",
+            "input": {
+                "url": "/vatican/counter/delete",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "criteria": {
+                        "name": "test_counter"
+                    }
+                }
+            },
+            "data": {"name": "test_counter"},
+            "output": {"affected": 1 },
+            "result": {}
+        }
+    ]
+    },
+    {
+    "api": "/vatican/test1/delete",
+    "cases": [
+        {
+            "description": "should get response with a valid criteria.",
+            "input": {
+                "url": "/vatican/test1/delete",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "criteria": {
+                        "test": 100
+                    }
+                }
+            },
+            "data": {"test": 100},
+            "output": {"affected": 1 },
+            "result": {}
+        },
+        {
+            "description": "should get response with a valid criteria and non-exist criteria.",
+            "input": {
+                "url": "/vatican/test1/delete",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "criteria": {
+                        "test": "test"
+                    }
+                }
+            },
+            "data": {"test": "test"},
+            "output": {"affected": 0 },
+            "result": {}
+        },
+        {
+            "description": "should get response with an invalid criteria.",
+            "input": {
+                "url": "/vatican/test1/delete",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "in-criteria": {
+                        "test": "test"
+                    },
+                    "update": {
+                        "$set": {
+                            "test": "test2"
+                        }
+                    }
+                }
+            },
+            "data": {"test": "test2"},
+            "output": "1001",
+            "result": {"test": "test2"}
+        },
+        {
+            "description": "should get error response without correspond HTTP Method.",
+            "input": {
+                "url": "/vatican/test1/delete",
+                "method": "GET",
+                "json": true,
+                "body": {
+                    "test": "test"
+                }
+            },
+            "data": {"test": "test"},
+            "output": "405",
+            "result": {"test": "test"}
+        }
+    ]
+    },
+    {
+    "api": "/vatican/test2/delete",
+    "cases": [
+        {
+            "description": "should get response with a valid criteria.",
+            "input": {
+                "url": "/vatican/test2/delete",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "criteria": {
+                        "test": "test2"
+                    }
+                }
+            },
+            "data": {"test": "test2"},
+            "output": {"affected": 1 },
+            "result": {}
+        },
+        {
+            "description": "should get response with a valid criteria and non-exist criteria.",
+            "input": {
+                "url": "/vatican/test2/delete",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "criteria": {
+                        "test": "test"
+                    }
+                }
+           },
+            "data": {"test": "test"},
+            "output": {"affected": 0 },
+            "result": {}
+        },
+        {
+            "description": "should get response with an invalid criteria.",
+            "input": {
+                "url": "/vatican/test2/delete",
+                "method": "POST",
+                "json": true,
+                "body": {
+                    "in-criteria": {
+                        "test": "test"
+                    },
+                    "update": {
+                        "$set": {
+                            "test": "test2"
+                        }
+                    }
+                }
+            },
+            "data": {"test": "test2"},
+            "output": "1001",
+            "result": {"test": "test2"}
+        },
+        {
+            "description": "should get error response without correspond HTTP Method.",
+            "input": {
+                "url": "/vatican/test2/delete",
+                "method": "GET",
+                "json": true,
+                "body": {
+                    "test": "test"
+                }
+            },
+            "data": {"test": "test"},
+            "output": "405",
+            "result": {"test": "test"}
+        }
+    ]
+    }
+]

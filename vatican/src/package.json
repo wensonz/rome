@@ -1,0 +1,6 @@
+{
+   "name": "vatican",
+   "version": "0.1.0",
+   "description": "Unified Storage API for ROME.",
+   "main": "./index"
+}
