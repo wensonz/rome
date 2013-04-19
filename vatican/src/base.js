@@ -296,6 +296,23 @@ Condotti.add('caligula.components.data.base', function (C) {
         );
     };
     
+    /**
+     * Magic "default" method used to handle the required action like 'data.xxx'
+     * where this handler is plugged on the 'data'.
+     * 
+     * @method default
+     * @param {Action} action the action to be handled
+     */
+    DataHandler.prototype.default = function (action) {
+        var tokens = null,
+            method = null;
+            
+        tokens = action.name.split('.');
+        method = tokens[tokens.length - 1]; // the last segment is supposed to
+                                            // be the method to be called
+        this[method].call(this, action);
+    };
+    
     
     C.namespace('caligula.handlers').DataHandler = DataHandler;
     
