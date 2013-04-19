@@ -97,7 +97,7 @@ Condotti.add('caligula.actions.http', function (C) {
             }
         };
         
-        body = JSON.stringify(content);
+        body = JSON.stringify(content, null, 4);
         
         this.response.writeHead(status, {
             'Content-Type': 'application/json',
