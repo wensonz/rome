@@ -38,6 +38,14 @@ Condotti.add('caligula.components.data.mongo', function (C) {
          * @deafult collection
          */
         this.collection_ = collection;
+        
+        /**
+         * Logger instance for this connection
+         * 
+         * @property logger_
+         * @type Logger
+         */
+        this.logger_ = C.logging.getObjectLogger(this);
     }
     
     /**
@@ -267,11 +275,15 @@ Condotti.add('caligula.components.data.mongo', function (C) {
      *                            callback is 'function (error, result) {}'
      */
     MongoConnection.prototype.cas = function (data, callback) {
+        var sort = null;
+        
         data.operations = data.operations || {};
         data.operations.w = 1;
+        sort = data.operations.sort || {};
+        delete data.operations.sort;
         
         this.collection_.findAndModify(
-            data.compare, data.set, data.operations, callback
+            data.compare, sort, data.set, data.operations, callback
         );
     };
     
@@ -341,7 +353,7 @@ Condotti.add('caligula.components.data.mongo', function (C) {
             function (next) {
                 message = 'Connecting to mongodb server with url ' + self.url_ +
                           ', options ' + self.options_;
-                mongodb.Db.connect(this.url_, this.options_, next);
+                mongodb.Db.connect(self.url_, self.options_, next);
             },
             function (db, next) {
                 self.logger_.debug(message + ' succeed.');

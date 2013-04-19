@@ -153,7 +153,7 @@ Condotti.add('caligula.components.data.base', function (C) {
      * @param {Action} action the creation action to be handled
      */
     DataHandler.prototype.create = function (action) {
-        this.execute_(action, action.data, 'insert', 'Creating');
+        this.execute_(action, action.data, 'create', 'Creating');
     };
     
     /**
@@ -248,7 +248,7 @@ Condotti.add('caligula.components.data.base', function (C) {
         var params = action.data;
 
         // handling count
-        if ('count' in params.operations) {
+        if (params.operations && params.operations.count) {
             this.count(action);
             return;
         }
@@ -277,7 +277,7 @@ Condotti.add('caligula.components.data.base', function (C) {
     DataHandler.prototype.cas = function (action) {
         
         this.execute_(
-            action, 'cas', 'Comparing and Setting', 
+            action, action.data, 'cas', 'Comparing and Setting', 
             function (error, result) {
                 if (error) {
                     action.error(new C.caligula.errors.InternalServerError());
