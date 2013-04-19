@@ -99,7 +99,7 @@ Condotti.add('caligula.components.data.base', function (C) {
      *                            some error occurs. The signature of the
      *                            callback is 'function (error, result) {}'
      */
-    DataHandler.prototype.execute_ = function (action, data, method, description
+    DataHandler.prototype.execute_ = function (action, data, method, description,
                                                callback) {
         var self = this,
             message = null,
@@ -202,14 +202,50 @@ Condotti.add('caligula.components.data.base', function (C) {
     };
     
     /**
-     * Read the data records according to the specified criteria
+     * Group the records with the help of the "group" method of the Connection.
+     * The data structure of the passed-in param is like:
+     * {
+     *     criteria: ${criteria},
+     *     fields: ${fields},
+     *     operations: {
+     *         skip: ${skip},
+     *         limit: ${limit},
+     *         sort: ${sort}
+     *     },
+     *     by: ${field to group by},
+     *     aggregation:${aggregation fields using $max, $min, $sum or $avg}
+     * }
+     * 
+     * @method group
+     * @param {Action} action the grouping action to be handled
+     */
+    DataHandler.prototype.group = function (action) {
+        this.execute_(
+            action, action.data, 'group', 'Grouping', function(error, result) {
+                if (error) {
+                    action.error(new C.caligula.errors.InternalServerError());
+                    return;
+                }
+                action.done({
+                    affected: result.length,
+                    data: result
+                });
+            }
+        );
+    };
+    
+    /**
+     * Read the data records according to the specified criteria. Note that the
+     * "affected" field of the result of this method now means only the actual
+     * number of records that satisfy both criteria and operations, but not the
+     * number of the records which only satisfy the criteria but omit the "skip"
+     * and "limit" settings.
      *
      * @method read
      * @param {Action} action the read action to be handled
      */
     DataHandler.prototype.read = function (action) {
-        var params = action.data,
-            self = this;
+        var params = action.data;
 
         // handling count
         if ('count' in params.operations) {
@@ -218,21 +254,18 @@ Condotti.add('caligula.components.data.base', function (C) {
         }
 
         // real query
-        C.async.parallel({
-            'affected': function (next) {
-                self.execute_(action, { criteria: params.criteria }, 'count', 
-                              'Counting', next);
-            },
-            'data': function (next) {
-                self.execute_(action, action.data, 'read', 'Reading', next);
+        this.execute_(
+            action, action.data, 'read', 'Reading', function(error, result) {
+                if (error) {
+                    action.error(new C.caligula.errors.InternalServerError());
+                    return;
+                }
+                action.done({
+                    affected: result.length,
+                    data: result
+                });
             }
-        }, function (error, result) {
-            if (error) {
-                action.error(new C.caligula.errors.InternalServerError());
-                return;
-            }
-            action.done(result);
-        });
+        );
     };
     
     /**
@@ -242,6 +275,9 @@ Condotti.add('caligula.components.data.base', function (C) {
      * @param {Action} action the cas action to be handled
      */
     DataHandler.prototype.cas = function (action) {
+        var message = null,
+            self = this;
+        
         this.execute_(
             action, 'cas', 'Comparing and Setting', 
             function (error, result) {
@@ -249,8 +285,9 @@ Condotti.add('caligula.components.data.base', function (C) {
                     action.error(new C.caligula.errors.InternalServerError());
                     return;
                 }
+                
                 action.done({
-                    affected: 1,
+                    affected: result ? 1 : 0,
                     data: result
                 });
             }

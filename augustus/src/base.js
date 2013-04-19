@@ -43,7 +43,7 @@ Condotti.add('caligula.components.configuration.base', function (C) {
             self = this,
             message = null;
 
-        message = 'Acquiring counter.increase on \'revision\''
+        message = 'Acquiring counter.increase on \'revision\'';
         this.logger_.debug(message + ' ...');
 
         action.data = { name: 'revision', value: 1 };
@@ -61,14 +61,83 @@ Condotti.add('caligula.components.configuration.base', function (C) {
             callback(null, result.value);
         });
     };
-
+    
     /**
-     * Create a configuration record. This method is a generic implementation
-     * after analyzing the requirements of the creation of different
-     * configuration data, which only differenciate with each other on the
-     * name of the collection in the database. The name of the collection to be
-     * used is expected to be a property of the constructor of the current
-     * handler instance.
+     * Lock the entire configuration updates/creation
+     *
+     * @method lock_
+     * @param {Action} action the action which causes a configuration change,
+     *                        thus requires locking the entire configuration
+     *                        first
+     * @param {Function} callback the callback function to be invoked after the
+     *                            lock has been acquired successfully, or
+     *                            some error occurs. The signature of the
+     *                            callback is 'function (error, id) {}'
+     */
+    ConfigurationHandler.prototype.lock_ = function(action, callback) {
+        var params = action.data,
+            self = this,
+            message = null;
+
+        message = 'Calling lock.acquire on \'configuration\'';
+        this.logger_.debug(message + ' ...');
+
+        action.data = { name: 'configuration', lease: 5000 }; // max lifespan for a lock
+        action.acquire('lock.acquire', function (error, result) {
+            action.data = params;
+
+            if (error) {
+                self.logger_.debug(message + ' failed. Error: ' + 
+                                   C.lang.reflect.inspect(error));
+                callback(error, null);
+                return;
+            }
+
+            self.logger_.debug(message + ' succeed. Owner id: ' + result);
+            callback(null, result);
+        });
+    };
+    
+    /**
+     * Unlock the entire configuration updates/creation
+     *
+     * @method unlock_
+     * @param {Action} action the action which causes a configuration change,
+     *                        thus requires locking the entire configuration
+     *                        first
+     * @param {String} id the owner id of the lock currently hold
+     * @param {Function} callback the callback function to be invoked after the
+     *                            lock has been acquired successfully, or
+     *                            some error occurs. The signature of the
+     *                            callback is 'function (error, id) {}'
+     */
+    ConfigurationHandler.prototype.lock_ = function(action, id, callback) {
+        var params = action.data,
+            self = this,
+            message = null;
+
+        message = 'Calling lock.release on \'configuration\'';
+        this.logger_.debug(message + ' ...');
+
+        action.data = { name: 'configuration', owner: id };
+        action.acquire('lock.release', function (error, result) {
+            action.data = params;
+
+            if (error) {
+                self.logger_.debug(message + ' failed. Error: ' + 
+                                   C.lang.reflect.inspect(error));
+                callback(error, null);
+                return;
+            }
+
+            self.logger_.debug(message + ' succeed. ');
+            callback(null, result);
+        });
+    };
+    
+    
+    /**
+     * Create one or more configuration records.
      *
      * @method create
      * @param {Action} action the creation action to be handled
@@ -77,7 +146,9 @@ Condotti.add('caligula.components.configuration.base', function (C) {
         var self = this,
             params = action.data,
             message = null,
-            revision = null;
+            revision = null,
+            names = null,
+            lock = null;
 
         // TODO: param check
         if (!Array.isArray(params)) {
@@ -85,45 +156,45 @@ Condotti.add('caligula.components.configuration.base', function (C) {
         }
 
         C.async.waterfall([
-            function (next) { // double confirm that there is no any object in
+            function (next) { // acquiring lock
+                 message = 'Acquiring the configuration lock for creating';
+                self.logger_.debug(message + ' ...');
+                self.lock_(action, next);
+            },
+            function (result, next) { // double confirm that there is no any object in
                               // the database with the same name as the one
                               // to be created
-                var names = null;
+                self.logger_.debug(message + ' succeed.');
+                lock = result;
+                
                 names = params.map(function (param) { return param.name; });
-
                 message = 'Double confirming the non-existence of the names ' +
                           'to be created: ' + names.toString() + ' via query';
                 self.logger_.debug(message + ' ...');
-
                 action.data = {
                     criteria: { name: { '$in': names } },
                     fields: { name: 1 }
                 };
-
                 action.acquire(
-                    'data.' + self.getConfigurationType_() + '.read',
+                    'data.configuration.read',
                     next
                 );
             },
             function (result, next) { // get revision to be used
-                var names = null;
-                self.logger_.debug(message + 
-                                   ' succeed. The existence: ' + 
+                self.logger_.debug(message + ' succeed. The existings: ' + 
                                    C.lang.reflect.inspect(result));
-
                 if (result.length > 0) {
                     names = result.map(function (item) {
                         return item.name;
                     });
-
+                    
                     next(new C.caligula.errors.InvalidArgumentError(
-                        'There have already been some ' + 
-                        self.getConfigurationType_() + 
-                        's with the following names: ' + names.toString()
+                        'There have already been some configurations ' + 
+                        'whose name is in: ' + names.toString()
                     ));
                     return;
                 }
-
+                
                 message = 'Generating the revision number to be used';
                 self.logger_.debug(message + ' ...');
                 self.getNextRevision_(action, next);
@@ -131,32 +202,43 @@ Condotti.add('caligula.components.configuration.base', function (C) {
             function (result, next) {
                 self.logger_.debug(message + ' succeed. Revision: ' + result);
                 revision = result;
-
+                
                 params.forEach(function (param) { param.revision = revision; });
                 action.data = params;
                 
-                message = 'Creating ' + self.getConfigurationType_() + '(s) ' +
+                message = 'Creating configuration(s)' +
                           C.lang.reflect.inspect(params);
                 self.logger_.debug(message + ' ...');
-
+                
                 action.acquire(
-                    'data.' + self.getConfigurationType_() + '.create',
+                    'data.configuration.create',
                     next
                 );
             }
         ], function (error, result) {
             
-            if (error) {
-                self.logger_.error(message + ' failed. Error: ' +
-                                   C.lang.reflect.inspect(error));
-                action.error(error);
+            var cleanup = function () {
+                if (error) {
+                    self.logger_.error(message + ' failed. Error: ' +
+                                       C.lang.reflect.inspect(error));
+                    action.error(error);
+                    return;
+                }
+                
+                self.logger_.debug(message + ' succeed.');
+                action.done({
+                    revision: revision
+                });
+            };
+            
+            if (lock) {
+                self.logger_.debug('Releasing the configuration lock for ' +
+                                   'creating ...');
+                self.unlock_(action, lock, cleanup);
                 return;
             }
-
-            self.logger_.debug(message + ' succeed.');
-            action.done({
-                revision: revision
-            });
+            
+            cleanup();
         });
     };
     
@@ -172,75 +254,32 @@ Condotti.add('caligula.components.configuration.base', function (C) {
         var self = this,
             params = action.data,
             message = null,
-            updateOne = null,
             revision = null,
-            failures = {},
+            lock = null,
             revisions = {};
 
         // TODO: param check
         if (!Array.isArray(params)) {
             params = [params];
         }
-
-        // update a single record
-        updateOne = function (item, next) {
-            var ac = action.clone(),
-                message = null,
-                criteria = null;
-
-            message = 'Updating ' + self.getConfigurationType_() + ' ' + 
-                      C.lang.reflect.inspect(item);
-            self.logger_.debug(message + ' ...');
-            
-            criteria = {
-                name: item.name,
-                revision: item.revision
-            };
-            item.revision = revision;
-            ac.data = {
-                criteria: criteria,
-                update: item
-            };
-
-            ac.acquire(
-                'data.' + self.getConfigurationType_() + '.update',
-                function (error, result) {
-                    if (error) {
-                        self.logger_.debug(message + ' failed. Error: ' + 
-                                           C.lang.reflect.inspect(error));
-                        failures[item.name] = error.toString();
-                        next(); // anyway the process has to go on
-                        return;
-                    }
-
-                    self.logger_.debug(' succeed.');
-                    if (1 !== result.affected) {
-                        self.logger_.debug('However ' + result.affected + ' ' +
-                                           self.getConfigurationType_() + 
-                                           '(s) are affected');
-
-                        failures[item.name] = 'A single ' + 
-                                              self.getConfigurationType_() +
-                                              ' is expected to be updated, ' +
-                                              'but ' + result.affected + 
-                                              self.getConfigurationType_() +
-                                              ' updated.';
-                    }
-                    next();
-                }
-            );
-        };
-
+        
+        
         C.async.waterfall([
-            function (next) { // read the current configuration records
-                var names = null,
-                    criteria = null;
+            function (next) { // acquire the updating lock
+                message = 'Acquiring the configuration lock for updating';
+                self.logger_.debug(message + ' ...');
+                self.lock_(action, next);
+            },
+            function (result, next) { // read the current configuration
+                var names = null;
                 
+                self.logger_.debug(message + ' succeed.');
+                lock = result;
                 // prepare the following data:
                 // 1. the revision dictionary for comparing with the current 
                 //    ones in database
                 // 2. the names to be updated for querying the database
-                names = params.map(function (param) { 
+                names = params.map(function (param) {
                     revisions[param.name] = param.revision;
                     return param.name; 
                 });
@@ -249,34 +288,34 @@ Condotti.add('caligula.components.configuration.base', function (C) {
                           C.lang.reflect.inspect(names);
                 self.logger_.debug(message + ' ...');
                 
-                action.data = { criteria: { name: { '$in': names }}};
+                action.data = { 
+                    criteria: { name: { '$in': names }}, 
+                    fields: { name: 1, revision: 1 }
+                };
+                
                 action.acquire(
-                    'data.' + self.getConfigurationType_() + '.read',
+                    'data.configuration.read',
                     next
                 );
             },
             function (result, next) { // verify the configurations to be updated
                                       // exist in the database
-                var changed = null,
-                    matched = false;
-
+                
                 self.logger_.debug(message + ' succeed. Configuration: ' +
                                    C.lang.reflect.inspect(result.data));
                 
-                message = 'Verifying the ' + self.getConfigurationType_() +
-                          '(s) exist in the database';
+                message = 'Verifying the configuration(s) exist in the database';
                 self.logger_.debug(message + ' ...');
-
+                
                 if (result.data.length !== params.length) {
                     next(new C.caligula.errors.InvalidArgumentError(
-                        'Some of the ' + self.getConfigurationType_() +
-                        '(s) to be updated can not be found in database.' +
-                        'Required: ' + params.length + ', found: ' + 
-                        result.data.length
+                        'Some of the configuration(s) to be updated can not ' +
+                        'be found in database. Required: ' + params.length + 
+                        ', found: ' + result.data.length
                     ));
                     return;
                 }
-
+                
                 next(null, result.data);
             },
             function (current, next) { // verify the corresponding 
@@ -284,8 +323,10 @@ Condotti.add('caligula.components.configuration.base', function (C) {
                                        // updated in the database keep unchanged 
                                        // after they are checked out by 
                                        // comparing the revisions
+                var changed = null;
+                
                 self.logger_.debug(message + ' succeed.');
-
+                
                 message = 'Verifying the revisions of the configurations to ' +
                           'be updated match with those of the current ones';
                 self.logger_.debug(message + ' ...');
@@ -299,63 +340,61 @@ Condotti.add('caligula.components.configuration.base', function (C) {
                 
                 if (changed.length > 0) {
                     next(new C.caligula.errors.InvalidArgumentError(
-                        'The corresponsive ' + self.getConfigurationType_() + 
-                        '(s) of the following in the database have been ' +
-                        'changed after they were checked out: ' + 
-                        changed.join(', ')
+                        'The corresponsive configuration(s) in the database ' +
+                        'of the following have been changed after they were ' +
+                        'checked out: ' + changed.join(', ')
                     ));
                     return;
                 }
-
-                next(null, current);
-            },
-            function (current, next) { // Saving history
-                self.logger_.debug(message + ' succeed.');
-                message = 'Saving the current ' + self.getConfigurationType_() +
-                          ' to be updated into history';
-                self.logger_.debug(message + ' ...');
-                action.data = current;
-                action.acquire(
-                    'data.' + self.getConfigurationType_() + '-history.create',
-                    next
-                );
+                
+                next();
             },
             function (next) { // Getting the next revision
-
+                
                 self.logger_.debug(message + ' succeed.');
-
+                
                 message = 'Generating the revision number to be used';
                 self.logger_.debug(message + ' ...');
                 self.getNextRevision_(action, next);
             },
-            function (revision, next) {
-                self.logger_.debug(message + ' succeed. Revision: ' + revision);
+            function (result, next) {
+                self.logger_.debug(message + ' succeed. Revision: ' + result);
+                revision = result;
 
-                message = 'Updating ' + self.getConfigurationType_() + '(s) ' +
-                          C.lang.reflect.inspect(params) + ' in parallel';
+                message = 'Updating configuration(s) ' +
+                          C.lang.reflect.inspect(params);
                 self.logger_.debug(message + ' ...');
-
-                C.async.forEach(params, updateOne, next);
+                
+                action.data = params;
+                action.acquire(
+                    'data.configuration.create',
+                    next
+                );
             }
         ], function (error) {
             
-            if (error) {
-                self.logger_.error(message + ' failed. Error: ' +
-                                   C.lang.reflect.inspect(error));
-                action.error(error);
+            var cleanup = function () {
+                if (error) {
+                    self.logger_.error(message + ' failed. Error: ' +
+                                       C.lang.reflect.inspect(error));
+                    action.error(error);
+                    return;
+                }
+                
+                self.logger_.debug(message + ' succeed.');
+                action.done({
+                    revision: revision
+                });
+            };
+            
+            if (lock) {
+                self.logger_.debug('Releasing the configuration lock for ' +
+                                   'updating ...');
+                self.unlock_(action, lock, cleanup);
                 return;
             }
-
-            self.logger_.debug(message + ' complete. Failures: ' +
-                               C.lang.reflect.inspect(failures));
-            if (Object.keys(failures).length > 0) {
-                action.error(new C.caligula.errors.PartialFailedError(failures));
-                return;
-            }
-
-            action.done({
-                revision: revision
-            });
+            
+            cleanup();
         });
     };
 
@@ -366,8 +405,17 @@ Condotti.add('caligula.components.configuration.base', function (C) {
      * @param {Action} action the reading action to be handled
      */
     ConfigurationHandler.prototype.read = function(action) {
+        var params = action.data,
+            self = this;
+        
+        action.data = {
+            //
+        };
+        action.data.by = 'name';
+        action.data.aggregation = { revision: { '$max': 'revision' }};
+        
         action.acquire(
-            'data.' + this.getConfigurationType_() + '.read', 
+            'data.configuration.group', 
             function (error, result) {
                 if (error) {
                     action.error(error);
@@ -390,60 +438,10 @@ Condotti.add('caligula.components.configuration.base', function (C) {
             params = action.data,
             message = null,
             data = null,
-            deleteOne = null,
-            failures = {},
+            lock = null,
             revision = -1;
 
-        deleteOne = function (item, next) {
-            var ac = action.clone(),
-                message = null;
-
-            message = 'Deleting ' + self.getConfigurationType_() + ' ' + 
-                      C.lang.reflect.inspect(item);
-            self.logger_.debug(message + ' ...');
-
-            // find the max revision among the configurations to be deleted, 
-            // which is used as the return value
-            if (item.revision > revision) {
-                revision = item.revision;
-            }
-
-            ac.data = {
-                criteria: {
-                    name: item.name,
-                    revision: item.revision
-                }
-            }
-            
-            ac.acquire(
-                'data.' + self.getConfigurationType_() + '.delete',
-                function (error, result) {
-                    if (error) {
-                        self.logger_.debug(message + ' failed. Error: ' + 
-                                           C.lang.reflect.inspect(error));
-                        failures[item.name] = error.toString();
-                        next(); // go on the process anyway
-                        return;
-                    }
-
-                    self.logger_.debug(' succeed.');
-
-                    if (1 !== result.affected) {
-                        self.logger_.debug('However ' + result.affected + ' ' +
-                                           self.getConfigurationType_() + 
-                                           '(s) are affected');
-
-                        failures[item.name] = 'A single ' + 
-                                              self.getConfigurationType_() +
-                                              ' is expected to be deleted, ' +
-                                              'but ' + result.affected + 
-                                              self.getConfigurationType_() +
-                                              ' deleted.';
-                    }
-                    next();
-                }
-            );
-        };
+        
         C.async.waterfall([
             function (next) { // querying the configurations to be deleted
                 message = 'Reading the ' + self.getConfigurationType_() +

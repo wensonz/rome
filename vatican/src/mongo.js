@@ -134,8 +134,24 @@ Condotti.add('caligula.components.data.mongo', function (C) {
 
     /**
      * Implement the 'group by' functionality with the help of the aggregation
-     * framework of Mongodb.
+     * framework of Mongodb. The data structure of the passed-in param is like:
+     * {
+     *     criteria: ${criteria as $match},
+     *     fields: ${fields to select as $project},
+     *     operations: {
+     *         skip: ${skip as $skip},
+     *         limit: ${limit as $limit},
+     *         sort: ${sort as $sort}
+     *     },
+     *     by: ${field to group by as _id of $group},
+     *     aggregation:${aggregation fields using $max, $min, $sum or $avg}
+     * }
      *
+     * The following notes are expected to be awared:
+     * 1. For '$project', only fields selection and renaming are supported,
+     *    any functionalities else such as dynamic calculation are not supported
+     * 
+     * 
      * @method group
      * @param {Object} data the data object contains the fields to group by, and
      *                      other options, such as the criteria to filter 
@@ -147,7 +163,68 @@ Condotti.add('caligula.components.data.mongo', function (C) {
      *                            callback is 'function (error, result) {}'
      */
     MongoConnection.prototype.group = function (data, callback) {
-        //
+        var criteria = data.criteria,
+            fields = data.fields,
+            operations = data.operations,
+            by = data.by,
+            aggregation = data.aggregation,
+            params = [],
+            prepare = null,
+            self = this,
+            message = null;
+        
+        prepare = function (value) {
+            var key = null;
+            
+            if (C.lang.reflect.isPlainObject(value)) {
+                for (key in value) {
+                    value[key] = prepare(value[key]);
+                }
+                return value;
+            } else if (String === C.lang.reflect.getObjectType(value)) {
+                return '$' + value;
+            }
+            
+            return value;
+        };
+        
+        criteria && params.push({ '$match': criteria });
+        operations && operations.sort && params.push({ 
+            '$sort': operations.sort 
+        });
+        operations && operations.skip && params.push({ 
+            '$skip': operations.skip 
+        });
+        operations && operations.limit && params.push({ 
+            '$limit': operations.limit 
+        });
+        
+        fields && params.push({ '$project': prepare(fields) }); // renaming and 
+                                                                // fields 
+                                                                // projection 
+                                                                // are supported
+        
+        // TODO: copy aggregation first
+        aggregation['_id'] = by;
+        params.push({ '$group': prepare(aggregation) });
+        message = 'Aggregating on collection ' + 
+                  this.collection_.collectionName + ' with params: ' +
+                  C.lang.reflect.inspect(params);
+        
+        this.logger_.debug(message + ' ...');
+        this.collection_.aggregate(params, function (error, result) {
+            
+            if (error) {
+                self.logger_.debug(message + ' failed. Error: ' +
+                                   C.lang.reflect.inspect(error));
+                callback(error, null);
+                return;
+            }
+            
+            self.logger_.debug(message + ' succeed. Result: ' +
+                               C.lang.reflect.inspect(result));
+            callback(null, result);
+        });
     };
 
     /**

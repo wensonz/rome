@@ -2,18 +2,19 @@
  * This module contains the implementation of the CounterHandler, which is
  * designed to handle the actions about the counters.
  *
- * @module caligula.component.configuration.counter
+ * @module caligula.components.configuration.counter
  */
-Condotti.add('caligula.component.configuration.counter', function (C) {
+Condotti.add('caligula.components.configuration.counter', function (C) {
     
     /**
      * This CounterHandler is designed to handle required actions about the
-     * counter. A counter is 
+     * counter.
      *
      * @class CounterHandler
      * @constructor
+     * @extends Handler
      */
-    function CounterHandler (config) {
+    function CounterHandler () {
         /* inheritance */
         this.super();
     }
@@ -32,7 +33,6 @@ Condotti.add('caligula.component.configuration.counter', function (C) {
      */
     CounterHandler.prototype.increase = function(action) {
         var params = null,
-            data = null,
             value = null;
         
         params = action.data;
@@ -49,7 +49,40 @@ Condotti.add('caligula.component.configuration.counter', function (C) {
                 '$inc':  { 'value': value }
             },
             operations: {
-                new: true
+                new: true,
+                upsert: true
+            }
+        };
+        
+        action.acquire('data.counter.cas', function (error, result) {
+            if (error) {
+                action.error(error);
+                return;
+            }
+
+            action.done(result);
+        });
+    };
+    
+    /**
+     * Reset the specified counter
+     * 
+     * @method reset
+     * @param {Action} action the reset action to be handled
+     */
+    CounterHandler.prototype.reset = function (action) {
+        var params = null;
+        
+        params = action.data;
+        action.data = {
+            compare: {
+                name: params.name
+            },
+            set: {
+                value: 0
+            },
+            operations: {
+                upsert: true
             }
         };
         

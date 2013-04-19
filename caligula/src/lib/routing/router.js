@@ -162,7 +162,7 @@ Condotti.add('caligula.routing.router', function (C) {
                 handler.default.call(handler, action);
             } else {
                 action.error(C.caligula.errors.ActionHandlerNotFoundError(
-                    action, token
+                    'Handler for action ' + action.name + ' can not be found.'
                 ));
             }
         } else {
@@ -172,7 +172,7 @@ Condotti.add('caligula.routing.router', function (C) {
                 next.call(action);
             } else {
                 action.error(C.caligula.errors.ActionHandlerNotCallableError(
-                    action
+                    'Handler for action ' + action.name + ' is found, but not callable'
                 ));
             }
         }

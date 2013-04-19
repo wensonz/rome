@@ -153,7 +153,7 @@ Condotti.add('caligula.actions.base', function (C) {
             this.pop_(id);
             this.logger_.debug('Trying to route the required action ' + 
                                action + ' failed. Error: ' +
-                               C.lang.reflect.inspect(error));
+                               C.lang.reflect.inspect(e));
             callback(e, null, {}); // TODO: double confirm if status is needed
         }
         

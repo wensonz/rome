@@ -103,18 +103,13 @@ Condotti.add('caligula.errors.http', function (C) {
      * @class ActionHandlerNotFoundError
      * @constructor
      * @extends C.errors.HttpError
-     * @param {Action} action the action to be routed
-     * @param {String} segment the segment of the action name that stops the 
-     *                         routing tree travel
+     * @param {String} message the message describes this error
      */
-    function ActionHandlerNotFoundError (action, segment) {
+    function ActionHandlerNotFoundError (message) {
         /* inheritance */
-        this.super(404, 404, 'API ' + action.url.pathname + 
-                             ' can not be found.');
+        this.super(404, 404, message);
         
         this.name = 'ActionHandlerNotFoundError';
-        this.action = action;
-        this.segment = segment;
     }
     
     C.lang.inherit(ActionHandlerNotFoundError, HttpError);
@@ -122,27 +117,27 @@ Condotti.add('caligula.errors.http', function (C) {
     C.namespace('caligula.errors').ActionHandlerNotFoundError = 
         ActionHandlerNotFoundError;
     
+    
     /**
-     * This type of errors are thrown when a batch updates or removes are
-     * required, but only some of them succeed.
+     * This type of error is thrown when the action handler is found not be
+     * a callable, because it's not a function, nor an object with a member
+     * function 'call'.
      *
-     * @class PartialFailedError
+     * @class ActionHandlerNotCallableError
      * @constructor
-     * @extends HttpError
-     * @param {Object} failures the information about the failures, keys of
-     *                          which are the identifiers, and the values are
-     *                          the corresponding error messages
+     * @extends C.errors.HttpError
+     * @param {String} message the message describes this error
      */
-    function PartialFailedError(failures) {
+    function ActionHandlerNotCallableError (message) {
         /* inheritance */
-        this.super(500, 515, 'Partial of the required operations failed. ' +
-                             'Failures: ' + JSON.stringify(failures));
-
-        this.name = 'PartialFailedError';
-        this.failures = failures;
+        this.super(406, 406, message);
+        
+        this.name = 'ActionHandlerNotFoundError';
     }
-
-    C.lang.inherit(PartialFailedError, HttpError);
-    C.namespace('caligula.errors').PartialFailedError = PartialFailedError;
+    
+    C.lang.inherit(ActionHandlerNotCallableError, HttpError);
+    
+    C.namespace('caligula.errors').ActionHandlerNotCallableError = 
+        ActionHandlerNotCallableError;
     
 }, '0.0.1', { requires: [] });

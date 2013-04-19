@@ -114,6 +114,7 @@ function main () {
             });
             
         }, function (factory, next) {
+            var app = null;
             C.info('Application is going to run ...');
             app = factory.get('app');
             app.run();
