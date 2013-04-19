@@ -252,7 +252,11 @@ Condotti.add('caligula.components.data.base', function (C) {
             this.count(action);
             return;
         }
-
+        
+        if (action.data.fields) { // ignore the _id field by default
+            action.data.fields._id = action.data.fields._id || 0;
+        }
+        
         // real query
         this.execute_(
             action, action.data, 'read', 'Reading', function(error, result) {
