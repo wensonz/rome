@@ -253,9 +253,8 @@ Condotti.add('caligula.components.data.base', function (C) {
             return;
         }
         
-        if (action.data.fields) { // ignore the _id field by default
-            action.data.fields._id = action.data.fields._id || 0;
-        }
+        action.data.fields = action.data.fields || {};
+        action.data.fields._id = action.data.fields._id || 0;
         
         // real query
         this.execute_(
@@ -287,6 +286,9 @@ Condotti.add('caligula.components.data.base', function (C) {
                     action.error(new C.caligula.errors.InternalServerError());
                     return;
                 }
+                
+                // Remove the fxxking '_id' from record
+                delete result._id;
                 
                 action.done({
                     affected: result ? 1 : 0,
