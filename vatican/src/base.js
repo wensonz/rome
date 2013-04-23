@@ -288,7 +288,7 @@ Condotti.add('caligula.components.data.base', function (C) {
                 }
                 
                 // Remove the fxxking '_id' from record
-                delete result._id;
+                result && delete result._id;
                 
                 action.done({
                     affected: result ? 1 : 0,

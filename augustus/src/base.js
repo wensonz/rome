@@ -111,7 +111,7 @@ Condotti.add('caligula.components.configuration.base', function (C) {
      *                            some error occurs. The signature of the
      *                            callback is 'function (error, id) {}'
      */
-    ConfigurationHandler.prototype.lock_ = function(action, id, callback) {
+    ConfigurationHandler.prototype.unlock_ = function(action, id, callback) {
         var params = action.data,
             self = this,
             message = null;
