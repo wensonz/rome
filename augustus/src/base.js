@@ -8,6 +8,7 @@
  * @module caligula.components.configuration.base
  */
 Condotti.add('caligula.components.configuration.base', function (C) {
+    // TODO: double check if the _id is returned
     
     /**
      * This ConfigurationHandler is designed to be not only the base class of 
