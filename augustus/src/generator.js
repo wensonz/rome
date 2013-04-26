@@ -321,7 +321,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                            C.lang.reflect.inspect(data) + ' with filters: ' +
                            C.lang.reflect.inspect(filters) + ' ...');
                            
-        C.async.forEachSerial(filters, function (filter, next) {
+        C.async.forEachSeries(filters, function (filter, next) {
                 
             if (message) {
                 self.logger_.debug(message + ' succeed. Merged: ' +
@@ -473,7 +473,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                                ' with filters: ' +
                                C.lang.reflect.inspect(filters) + ' ...');
                                
-            C.async.forEachSerial(filters, function (filter, next) {
+            C.async.forEachSeries(filters, function (filter, next) {
                 
                 if (message) {
                     self.logger_.debug(message + ' succeed.');

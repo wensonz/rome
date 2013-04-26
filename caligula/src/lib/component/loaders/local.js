@@ -106,8 +106,8 @@ Condotti.add('caligula.component.loaders.local', function (C) {
      *                            the callback is 'function (error) {}'
      */
     LocalComponentLoader.prototype.loadAll = function (callback) {
-        C.async.forEach(Object.keys(this.components_), this.load.bind(this), 
-                        callback);
+        C.async.forEachSeries(Object.keys(this.components_), 
+                              this.load.bind(this), callback);
     };
     
     /**
