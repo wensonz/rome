@@ -82,24 +82,53 @@ Condotti.add('caligula.routing.router', function (C) {
         
         root = this.config_[C.caligula.routing.ROOT];
         this.root_ =  root ? this.factory_.get(root) : {};
+        this.logger_.debug('Root of the routing tree is constructed: ' +
+                           C.lang.reflect.inspect(this.root_));
         
         Object.keys(this.config_).sort().forEach(function (path) {
             var index = path.lastIndexOf('.'),
                 name = null,
-                parent = self.root_;
+                parent = self.root_,
+                message = null;
             
             if (path === C.caligula.routing.ROOT) {
+                self.logger_.debug('Root path of the routing tree is to be ' +
+                                   'omitted since the root node has been ' +
+                                   'built.');
                 return;
             }
             
+            message = 'Building routing tree node ' + path;
+            self.logger_.debug(message + ' ...');
+            
             if (index >= 0) {
+                self.logger_.debug('Tree node to be built under path ' + path +
+                                   ' is child of node ' + 
+                                   path.substring(0, index));
                 parent = C.namespace.call(self.root_, path.substring(0, index));
+                self.logger_.debug('Parent of the tree node to be built has ' +
+                                   'been found under path ' + 
+                                   path.substring(0, index) + ': ' +
+                                   C.lang.reflect.inspect(parent));
                 name = path.substring(index + 1);
+                self.logger_.debug('Tree node to be built is gonna be plugged' +
+                                   ' onto its parent node as a property with ' +
+                                   'name ' + name);
             } else {
                 name = path;
+                self.logger_.debug('Tree node to be built is gonna be plugged' +
+                                   ' onto the root of the routing tree as a ' +
+                                   'property with name ' + name);
             }
             
+            self.logger_.debug('Getting handler from dotti factory with name ' +
+                               self.config_[path] + ' for tree node ' + path +
+                               ' ...');
             parent[name] = self.factory_.get(self.config_[path]);
+            
+            self.logger_.debug(message + ' completed. Handler plugged under ' +
+                               'path ' + path + ': ' + 
+                               C.lang.reflect.inspect(parent[name]));
         });
     };
     
@@ -145,34 +174,66 @@ Condotti.add('caligula.routing.router', function (C) {
             next = this.root_,
             token = null;
         
+        
         if (action.name !== C.caligula.actions.DEFAULT) {
+            this.logger_.debug('Action to be handled ' + action.name + 
+                               ' is not the default action "' + 
+                               C.caligula.actions.DEFAULT + '". Searching ' +
+                               'handler for it ...');
+                               
             while (next && (index < length)) {
                 handler = next;
                 token = tokens[index];
                 next = handler[token];
                 index += 1;
             }
+            this.logger_.debug('Handler searching for action ' + action.name + 
+                               ' complete. Status: index=' + index + 
+                               ', token=' + token + ', next=' +
+                               C.lang.reflect.inspect(next));
         }
         
         if (!next) {
+            this.logger_.debug('Can not find the exact handler for action ' +
+                               action.name + '. Searching stops at ' + 
+                               tokens.slice(0, index).join('.'));
+            this.logger_.debug('Current handler found is ' +
+                               C.lang.reflect.inspect(handler));
+                               
             if (C.lang.reflect.isFunction(handler.default)) { // "default"
                                                               // handler
                 // the handler is supposed to handle all thrown errors
+                
                 action.arguments = tokens.slice(index - 1);
+                this.logger_.debug('Magic "default" method is found from the ' +
+                                   'current handler, which is to be called ' +
+                                   'with action.arguments: ' +
+                                   C.lang.reflect.inspect(action.arguments));
+                                   
                 handler.default.call(handler, action);
             } else {
-                action.error(C.caligula.errors.ActionHandlerNotFoundError(
+                this.logger_.debug('However, this handler does not contain ' +
+                                   'the magic "default" method.');
+                action.error(new C.caligula.errors.ActionHandlerNotFoundError(
                     'Handler for action ' + action.name + ' can not be found.'
                 ));
             }
         } else {
+            this.logger_.debug('Handler for action ' + action.name + ' is ' +
+                               'found: ' + C.lang.reflect.inspect(next));
             if (C.lang.reflect.isFunction(next)) {
+                this.logger_.debug('And it\'s a function');
                 next.call(handler, action);
             } else if (next && C.lang.reflect.isFunction(next.call)) {
+                this.logger_.debug('Even though it\'s not a function, but ' +
+                                   'it\'s callable.')
                 next.call(action);
             } else {
-                action.error(C.caligula.errors.ActionHandlerNotCallableError(
-                    'Handler for action ' + action.name + ' is found, but not callable'
+                this.logger_.debug('However it\'s neigher a function, nor a ' +
+                                   'callable object.');
+                action.error(new C.caligula.errors.ActionHandlerNotCallableError(
+                    'Handler for action ' + action.name + 
+                    ' is found, but not callable'
                 ));
             }
         }
