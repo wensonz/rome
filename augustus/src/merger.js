@@ -9,4 +9,3 @@ Condotti.add('caligula.components.configuration.merger', function (C) {
     C.namespace('caligula.json.fast').Merger = C.require('fast-json-merger');
 
 }, '0.0.1', { requires: [] });
-
