@@ -627,14 +627,14 @@ Condotti.add('caligula.components.configuration.base', function (C) {
                 action.data = { criteria: { _id: { '$nin': ids }}};
                 action.acquire('data.configuration.read', next);
             },
-            function (result, next) { // add those old or deleted configuration into history
+            function (result, meta, next) { // add those old or deleted configuration into history
                 self.logger_.debug(message + ' succeed. Result: ' +
                                    C.lang.reflect.inspect(result));
                 
                 action.data = result.data;
                 action.acquire('data.configuration-history.create', next);
             },
-            function (result, next) { // remove the historic configurations
+            function (result, meta, next) { // remove the historic configurations
                 self.logger_.debug(message + ' succeed. Result: ' +
                                    C.lang.reflect.inspect(result));
                 
@@ -644,7 +644,7 @@ Condotti.add('caligula.components.configuration.base', function (C) {
                 action.data = { criteria: { _id: { '$nin': ids}}};
                 action.acquire('data.configuration.delete', next);
             },
-            function (result, next) { // query history
+            function (result, meta, next) { // query history
                 self.logger_.debug(message + ' succeed. Result: ' +
                                    C.lang.reflect.inspect(result));
                 

@@ -161,7 +161,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                 };
                 action.acquire('configuration.tag.expand', next);
             },
-            function (result, next) { // Reading the node information if the
+            function (result, meta, next) { // Reading the node information if the
                                       // does not exist when the tag is created
                 var node = null;
                 
@@ -188,7 +188,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                 action.data = { criteria: { name: params.node, type: 'node' }};
                 action.acquire('configuration.read', next);
             },
-            function (result, next) { // Filter out the list of roles the
+            function (result, meta, next) { // Filter out the list of roles the
                                       // user specified node depends on directly
                                       // or indirectly, and also the filters
                                       // to be executed

@@ -46,7 +46,7 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 action.data = { 'name': 'revision', 'value': 0 };
                 action.acquire('counter.increase', next);
             },
-            function (revision, next) {
+            function (revision, meta, next) {
                 self.logger_.debug(message + ' succeed. Revision: ' + revision);
                 
                 message = 'Creating tag ' + params.name + ' with revision ' + revision;
