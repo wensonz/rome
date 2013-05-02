@@ -43,7 +43,7 @@ Condotti.add('caligula.components.configuration.base', function (C) {
         var params = action.data,
             self = this,
             message = null;
-
+        // TODO: double check the result data format
         message = 'Acquiring counter.increase on \'revision\'';
         this.logger_.debug(message + ' ...');
 
@@ -58,7 +58,9 @@ Condotti.add('caligula.components.configuration.base', function (C) {
                 return;
             }
 
-            self.logger_.debug(message + ' succeed. Revision: ' + result.value);
+            self.logger_.debug(message + ' succeed. Revision: ' + 
+                               result.data.value);
+                               
             callback(null, result.data.value);
         });
     };

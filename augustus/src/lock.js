@@ -48,11 +48,8 @@ Condotti.add('caligula.components.configuration.lock', function (C) {
                 'name': params.name,
                 '$or': [
                     { state: LockState.UNLOCKED }, // unlocked
-                    {
-                        state: LockState.LOCKED,
-                        expire: { '$lt': Date.now() }
-                    }
-                }
+                    { state: LockState.LOCKED, expire: { '$lt': Date.now() } }
+                ]
             },
             set: {
                 state: LockState.LOCKED,
