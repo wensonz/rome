@@ -133,3 +133,4 @@ Condotti.add('caligula.components.configuration.lock', function (C) {
     C.namespace('caligula.handlers').LockHandler = LockHandler;
 
 }, '0.0.1', { requires: ['caligula.handlers.base'] });
+
