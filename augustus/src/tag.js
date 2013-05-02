@@ -191,3 +191,4 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
     C.namespace('caligula.handlers.configuration').TagHandler = TagHandler;
 
 }, '0.0.1', { requires: ['caligula.handlers.base'] });
+
