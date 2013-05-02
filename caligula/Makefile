@@ -5,7 +5,7 @@ TARGET = $(BUILD)/caligula
 SRC = src
 BIN = $(SRC)/bin
 LIB = $(SRC)/lib
-CONF = $(SRC)/conf
+CONF = $(SRC)/config
 
 target:
 	@mkdir -p $(TARGET)
