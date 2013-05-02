@@ -46,10 +46,9 @@ Condotti.add('caligula.components.configuration.lock', function (C) {
         action.data = {
             compare: {
                 'name': params.name,
-                '$or': {
-                    state: LockState.UNLOCKED, // unlocked
-                    '$and': { // locked, but expired because the original owner
-                              // failed to unlock it
+                '$or': [
+                    { state: LockState.UNLOCKED }, // unlocked
+                    {
                         state: LockState.LOCKED,
                         expire: { '$lt': Date.now() }
                     }

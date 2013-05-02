@@ -59,7 +59,7 @@ Condotti.add('caligula.components.configuration.base', function (C) {
             }
 
             self.logger_.debug(message + ' succeed. Revision: ' + result.value);
-            callback(null, result.value);
+            callback(null, result.data.value);
         });
     };
     
@@ -183,6 +183,7 @@ Condotti.add('caligula.components.configuration.base', function (C) {
                 self.logger_.debug(message + ' failed. Error: ' +
                                    C.lang.reflect.inspect(error));
                 callback(error, null);
+                return;
             }
             
             self.logger_.debug(message + ' succeed. Result: ' + 
@@ -222,7 +223,7 @@ Condotti.add('caligula.components.configuration.base', function (C) {
 
         C.async.waterfall([
             function (next) { // acquiring lock
-                 message = 'Acquiring the configuration lock for creating';
+                message = 'Acquiring the configuration lock for creating';
                 self.logger_.debug(message + ' ...');
                 self.lock_(action, next);
             },
@@ -600,7 +601,7 @@ Condotti.add('caligula.components.configuration.base', function (C) {
         
         C.async.waterfall([
             function (next) { // acquiring lock
-                 message = 'Acquiring the configuration lock for history';
+                message = 'Acquiring the configuration lock for history';
                 self.logger_.debug(message + ' ...');
                 self.lock_(action, next);
             },
