@@ -7,7 +7,7 @@
 Condotti.add('caligula.components.configuration.merger', function (C) {
     
     // The C++ addon for fast json merging
-    C.lang.merge = C.require('native-object-merge');
+    // C.lang.merge = C.require('native-object-merge');
     
     /**
      * This ConfigurationMerger class is the default configuration merger, which
