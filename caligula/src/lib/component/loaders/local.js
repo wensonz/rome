@@ -106,18 +106,8 @@ Condotti.add('caligula.component.loaders.local', function (C) {
      *                            the callback is 'function (error) {}'
      */
     LocalComponentLoader.prototype.loadAll = function (callback) {
-        var self = this,
-            modules = null;
-        
-        modules = Object.keys(this.components_).map(function (name) { 
-            return self.namespace_ + '.' + name + '.component';
-        });
-        
-        C.use(modules, callback);
-        /*
         C.async.forEachSeries(Object.keys(this.components_), 
                               this.load.bind(this), callback);
-        */
     };
     
     /**
@@ -132,31 +122,17 @@ Condotti.add('caligula.component.loaders.local', function (C) {
      *                            the callback is 'function (error) {}'
      */
     LocalComponentLoader.prototype.load = function (name, callback) {
-        /*
         var path = this.components_[name],
             json = null,
             config = null;
-        */
+        
         // TODO: verify if the name exists
-        /*
         json = C.natives.path.resolve(path, 'component.json');
         config = C.require(json);
-        */
-        /* merge the dotti and routing into correct position */
-        // this.factory_.configure(config);
         
-        /*
-        C.natives.fs.readdirSync(path).forEach(function (file) {
-            if (C.natives.path.extname(file) !== '.js') {
-                return;
-            }
-            
-            modules.push(
-                self.namespace_ + '.' + name + '.' + 
-                file.substring(0, file.length - 3)
-            );
-        });
-        */
+        /* merge the dotti and routing into correct position */
+        this.factory_.configure(config);
+        
         // TODO: verify if component.js exists
         C.use(this.namespace_ + '.' + name + '.component', callback);
     };
