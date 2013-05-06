@@ -138,7 +138,7 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 action.data = {
                     criteria: params.criteria,
                     operations: { sort: { revision: -1 }},
-                    by: params.tag,
+                    by: 'name',
                     aggregation: {
                         revision: { '$first': 'revision' }
                     }
@@ -159,7 +159,7 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 action.data = {
                     criteria: params.criteria,
                     operations: { sort: { revision: -1 }},
-                    by: params.tag,
+                    by: 'name',
                     aggregation: {
                         revision: { '$first': 'revision' }
                     }

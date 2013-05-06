@@ -57,6 +57,7 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
     FileResourceProcessor.prototype.process = function (resource, context, 
                                                         callback) {
         //
+        callback();
     };
     
     C.namespace('caligula.configuration.resources').FileResourceProcessor = FileResourceProcessor;
