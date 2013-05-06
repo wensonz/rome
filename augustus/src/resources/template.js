@@ -39,7 +39,7 @@ Condotti.add('caligula.components.configuration.resources.template', function (C
      */
     TemplateResourceProcessor.prototype.process = function (resource, context, 
                                                             callback) {
-        //
+        callback();
     };
     
     C.namespace('caligula.configuration.resources').TemplateResourceProcessor = TemplateResourceProcessor;
