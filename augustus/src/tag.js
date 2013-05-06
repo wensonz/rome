@@ -118,7 +118,7 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                                    
                 revision = result.data.revision;
                 message = 'Reading the configurations satisfy the user ' +
-                          'specified criteria' +  
+                          'specified criteria ' +  
                           C.lang.reflect.inspect(params.criteria) +
                           ' under the revision ' + revision;
                           
@@ -152,8 +152,21 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 // setup configuration dict based on current collection
                 configurations = result.data;
                 
+                // TODO: verify if it's necessary to query the history collection
+                
+                // restore the same param for grouping the configuration history
+                // since the original action.data has been modified
+                action.data = {
+                    criteria: params.criteria,
+                    operations: { sort: { revision: -1 }},
+                    by: name,
+                    aggregation: {
+                        revision: { '$first': 'revision' }
+                    }
+                };
+                
                 message = 'Reading the history configurations satisfy the ' + 
-                          'user specified criteria' +  
+                          'user specified criteria ' +  
                           C.lang.reflect.inspect(params.criteria) +
                           ' under the revision ' + revision;
                 

@@ -358,51 +358,6 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
     };
     
     /**
-     * Merge the resources and context data in the passed in configurations
-     * 
-     * @method mergeConfigurations_
-     * @param {Array} configurations the list of configurations whose data is to
-     *                               be merged
-     */
-    /*
-    GenerationHandler.prototype.mergeConfigurations_ = function (configurations) {
-        var priorities = {},
-            priority = -1,
-            self = this,
-            intermediate = [],
-            last = null;
-        
-        // Calculating the priorities
-        configurations.forEach(function (configuration) {
-            var name = configuration.name,
-                includes = configuration.includes || [];
-                
-            priorities[name] = includes.reduce(function (max, include, index) {
-                return Math.max(max, priorities[include] + 1);
-            }, 0);
-        });
-        
-        // Group configurations by their priority and merge those with the same
-        // priority, then save them into intermediate
-        last = configurations.reduce(function(merged, configuration) {
-            if (priorities[configuration.name] > priority) {
-                intermediate.push(merged);
-                merged = {};
-                priority = priorities[configuration.name];
-            }
-            
-            self.merger_.merge(merged, configuration, false);
-            return merged;
-        }, {});
-        
-        intermediate.push(last); // add the last merged configuration
-        return intermediate.reduce(function(result, merged) {
-            self.merger_.merge(result, merged, true);
-        }, {});
-    };
-    */
-    
-    /**
      * Process the resources with the passed in data
      * 
      * @method processResources_
@@ -416,19 +371,23 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
         var self = this,
             resources = data.resources,
             context = data.context,
-            result = {};
+            results = {};
         
         C.async.forEach(Object.keys(resources), function (name, next) {
             var resource = null,
                 processor = null,
                 message = null;
             
-            message = 'Processing resource ' + name;
-            self.logger_.debug(message + ' ...');
             resource = resources[name];
+            message = 'Processing resource ' + name + ' ' + 
+                      C.lang.reflect.inspect(resource) + ' with context ' +
+                      C.lang.reflect.inspect(context);
+                      
+            self.logger_.debug(message + ' ...');
+            
             processor = self.factory_.get(self.resources_ + '.' + resource.type);
-            // 
-            processor.process(resource, context, result, function (error) {
+            // TODO: add processor factory?
+            processor.process(resource, context, function (error, result) {
                 if (error) {
                     self.logger_.debug(message + ' failed. Error: ' +
                                        C.lang.reflect.inspect(error));
@@ -437,10 +396,11 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                 }
                 self.logger_.debug(message + ' succeed. Result: ' + 
                                    C.lang.reflect.inspect(result));
+                results[name] = result;
                 next();
             });
         }, function (error) {
-            callback(error, result);
+            callback(error, results);
         });
     };
     
