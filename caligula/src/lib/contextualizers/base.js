@@ -50,6 +50,27 @@ Condotti.add('caligula.contextualizers.base', function (C) {
                                                   ' in its child classes.'));
     };
     
+    /**
+     * Decontextualize the action object to a plain object which is to be used
+     * as the params of the "request" module to create HTTP request to remote
+     * HTTP API server.
+     *
+     * @method decontextualize
+     * @param {Action} action the action object to be decontextualized
+     * @param {Function} callback the callback function to be invoked when the
+     *                            action object has been successfully 
+     *                            decontextualized, or some error occurs. The
+     *                            signature of the callback is
+     *                            'function (error, data) {}'
+     */
+    Contextualizer.prototype.decontextualize = function (action, callback) {
+        callback(new C.errors.NotImplementedError('This decontextualize method' +
+                                                  ' is not implemented in ' +
+                                                  'this class, and is ' +
+                                                  'expected to be overwritten' +
+                                                  ' in its child classes.'));
+    };
+    
     C.namespace('caligula.contextualizers').Contextualizer = Contextualizer;
     
 }, '0.0.1', { requires: [] });

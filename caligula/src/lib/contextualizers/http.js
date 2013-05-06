@@ -81,7 +81,7 @@ Condotti.add('caligula.contextualizers.http', function (C) {
         var data = {};
         
         data.url = '/' + action.name.split('.').join('/') + '/';
-        data.json = action.data;
+        data.json = action.data; // used for "request"
         // TODO: add query string and headers
         callback(null, data);
     };
