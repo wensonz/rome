@@ -39,7 +39,7 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 self.logger_.debug(message + ' ...');
                 
                 if (params.revision) {
-                    next(params.revision);
+                    next(null, params.revision, null);
                     return;
                 }
                 
@@ -111,7 +111,7 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 action.data = { name: params.tag };
                 action.acquire('data.configuration.tag.read', next);
             },
-            function (result, next) { // reading the configuration collections
+            function (result, meta, next) { // reading the configuration collections
                 // TODO: check if the tag exist
                 self.logger_.debug(message + ' succeed. Revision: ' + 
                                    result.data.revision);
@@ -126,19 +126,19 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 
                 if (params.criteria) {
                     params.criteria = { '$and': [
-                        { 'revision': { '$le': revision }},
+                        { 'revision': { '$lte': revision }},
                         params.criteria
                     ]};
                 } else {
                     params.criteria = { 
-                        'revision': { '$le': revision }
+                        'revision': { '$lte': revision }
                     };
                 }
                 
                 action.data = {
                     criteria: params.criteria,
                     operations: { sort: { revision: -1 }},
-                    by: name,
+                    by: params.tag,
                     aggregation: {
                         revision: { '$first': 'revision' }
                     }
@@ -146,7 +146,7 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 // TODO: configuration handler provides this feature?
                 action.acquire('data.configuration.group', next);
             },
-            function (result, next) { // reading the history collections
+            function (result, meta, next) { // reading the history collections
                 self.logger_.debug(message + ' ...');
                 
                 // setup configuration dict based on current collection
@@ -159,7 +159,7 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 action.data = {
                     criteria: params.criteria,
                     operations: { sort: { revision: -1 }},
-                    by: name,
+                    by: params.tag,
                     aggregation: {
                         revision: { '$first': 'revision' }
                     }
