@@ -13,6 +13,7 @@ Condotti.add(
         'caligula.components.configuration.generator',
         'caligula.components.configuration.lock',
         'caligula.components.configuration.merger',
-        'caligula.components.configuration.tag'
+        'caligula.components.configuration.tag',
+        'caligula.components.configuration.resources.all'
     ] }
 );
