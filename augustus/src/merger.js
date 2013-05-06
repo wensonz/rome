@@ -91,6 +91,6 @@ Condotti.add('caligula.components.configuration.merger', function (C) {
         }, {});
     };
     
-    C.namespace('caligula.handlers.configuration').ConfigurationMerger = ConfigurationMerger;
+    C.namespace('caligula.configuration').ConfigurationMerger = ConfigurationMerger;
 
 }, '0.0.1', { requires: [] });
