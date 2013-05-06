@@ -220,7 +220,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                 self.logger_.debug(message + ' ...');
                 // Execute 'before' filters of each configuration object in
                 // parallel
-                self.prefilterConfigurations_(dependencies, next);
+                self.prefilterConfigurations_(action, dependencies, next);
             },
             function (next) { // merge all configurations into one object
                 var merger = null;
