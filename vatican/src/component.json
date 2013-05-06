@@ -1,23 +1,23 @@
 {
     "router": {
         "params": {
-            "1": {
-                "data.configuration": "handlers.data.configuration"
-            }
+            "0": { "value": {
+                "data": "handlers.data"
+            }}
         }
     },
-    "handlers.data.configuration": {
+    "handlers.data": {
         "type": "caligula.handlers.DataHandler",
         "params": {
-            "1": { "value": {}},
-            "2": { "reference": "configuration-connection-factory" }
+            "0": { "value": {}},
+            "1": { "reference": "configuration-connection-factory" }
         }
     },
     "configuration-connection-factory": {
         "type": "caligula.db.mongo.MongoConnectionFactory",
         "params": {
-            "1": { "value": {
-                "url": "mongodb://localhost/configuration"
+            "0": { "value": {
+                "url": "mongodb://localhost/test"
             }}
         }
     }
