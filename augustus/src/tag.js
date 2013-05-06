@@ -126,12 +126,12 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 
                 if (params.criteria) {
                     params.criteria = { '$and': [
-                        { 'revision': { '$lt': revision }},
+                        { 'revision': { '$lte': revision }},
                         params.criteria
                     ]};
                 } else {
                     params.criteria = { 
-                        'revision': { '$lt': revision }
+                        'revision': { '$lte': revision }
                     };
                 }
                 
