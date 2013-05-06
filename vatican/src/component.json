@@ -1,5 +1,6 @@
 {
     "router": {
+        "type": "caligula.routing.Router",
         "params": {
             "0": { "value": {
                 "data": "handlers.data"
