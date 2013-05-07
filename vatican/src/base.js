@@ -6,6 +6,9 @@
  */
 Condotti.add('caligula.components.data.base', function (C) {
     
+    var Handler = C.caligula.handlers.Handler,
+        V = C.validators;
+    
     /**
      * This DataHandler class is designed to handle the actions related with
      * the data storage, such as the CRUD, etc.
@@ -51,7 +54,7 @@ Condotti.add('caligula.components.data.base', function (C) {
         this.collection_ = this.config_.collection;
     }
     
-    C.lang.inherit(DataHandler, C.caligula.handlers.Handler);
+    C.lang.inherit(DataHandler, Handler);
     
     /**
      * Return the collection name to be operated on based on the configuration
@@ -166,6 +169,16 @@ Condotti.add('caligula.components.data.base', function (C) {
     DataHandler.prototype.update = function (action) {
         this.execute_(action, action.data, 'update', 'Updating');
     };
+    
+    DataHandler.prototype.update = Handler.validate(
+        DataHandler.prototype.update,
+        new V.ObjectValidator('action', {
+            'data.criteria': new V.OptionalValidator(new V.TypeValidator(
+                                                        'criteria', Object
+                                                    )),
+            'data.update': new V.TypeValidator('update', Object)
+        })
+    );
     
     /**
      * Delete the data records fulfill the specified criteria in the passed-in

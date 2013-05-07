@@ -41,6 +41,36 @@ Condotti.add('caligula.handlers.base', function (C) {
         this.logger_ = C.logging.getObjectLogger(this);
     }
     
+    /**
+     * Wrap the specified method with the provided validators in order to
+     * separate the validation with the handling of the request.
+     * 
+     * @method validate
+     * @static
+     * @param {Function} handler the handler function which need the validations
+     *                           on its params when called
+     * @param {Validator} validator the object validator used to validate 
+     *                              the passed-in action object
+     * @return {Function} the wrapped function
+     */
+    Handler.validate = function (handler, validator) {
+        return function (action) {
+            try {
+                validator.validate(action);
+            } catch (e) {
+                this.logger_.error('Validating action ' + 
+                                   C.lang.reflect.inspect(action) + 
+                                   ' failed. Error: ' + e.message);
+                action.error(
+                    new C.caligula.errors.InvalidArgumentError(e.message)
+                );
+                return;
+            }
+            
+            handler.call(this, action);
+        };
+    };
+    
     C.namespace('caligula.handlers').Handler = Handler;
     
 }, '0.0.1', { requires: [] });
