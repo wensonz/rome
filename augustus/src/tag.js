@@ -39,7 +39,7 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 self.logger_.debug(message + ' ...');
                 
                 if (params.revision) {
-                    next(null, params.revision, null);
+                    next(params.revision);
                     return;
                 }
                 
