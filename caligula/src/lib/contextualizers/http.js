@@ -10,8 +10,8 @@ Condotti.add('caligula.contextualizers.http', function (C) {
     /**
      * This HttpContextualizer class is the child class of its abstract base
      * Contextualizer, and is designed to process the incoming HTTP
-     * request, and generate a corresponding HttpAction object based on it 
-     * in order to complete the following processing.
+     * request, and add the contextualized data into the passed-in HttpAction 
+     * object based on the request in order to complete the following processing.
      *
      * @class HttpContextualizer
      * @constructor

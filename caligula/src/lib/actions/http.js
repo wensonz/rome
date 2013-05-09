@@ -14,7 +14,6 @@ Condotti.add('caligula.actions.http', function (C) {
      *
      * @class HttpAction
      * @constructor
-     * @param {String} name the name of the action
      * @param {Router} router the router which is to handle this action
      * @param {HttpRequest} request the incoming HTTP request
      * @param {HttpResponse} response the generated response to be sent to the
