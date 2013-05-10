@@ -90,13 +90,13 @@ Condotti.add('caligula.handlers.cli', function (C) {
                           C.lang.reflect.inspect(this.config_);
                 self.logger_.debug(message + ' ...');
                 
-                C.startup.bootstrap(this.config_, next);
+                C.caligula.startup.bootstrap(this.config_, next);
             },
             function (newC, next) {
                 self.logger_.debug(message + ' succeed.');
                 message = 'Starting service';
                 self.logger_.debug(message + ' ...');
-                newC.startup.start(self.config_, next);
+                newC.caligula.startup.start(self.config_, next);
             }
         ], function (error, result) {
             if (error) {
