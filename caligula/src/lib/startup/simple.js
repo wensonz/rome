@@ -151,8 +151,8 @@ Condotti.add('caligula.startup.simple', function (C) {
                 C.debug(message + ' ...');
                 
                 app = factory.get('app');
-                app.run();
-                next();
+                // TODO: add terminate support to the apps
+                app.run(next);
             }
         ], function (error) {
                 
@@ -163,7 +163,7 @@ Condotti.add('caligula.startup.simple', function (C) {
                     return;
                 }
                 
-                C.info('Application is running now.');
+                C.info('Application is terminated now.');
         });    
     }
     
