@@ -42,4 +42,4 @@ Condotti.add('caligula.handlers.cli', function (C) {
     
     C.namespace('caligula.handlers').ServiceHandler = ServiceHandler;
 
-}, '0.0.1', { requests: ['caligula.handlers.base'] });
+}, '0.0.1', { requires: ['caligula.handlers.base'] });

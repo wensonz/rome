@@ -41,7 +41,7 @@ function chaos (config, callback) {
             
             message = 'Bootstrap new Condotti instance';
             C.debug(message + ' ...');
-            C.startup.bootstrap(config, next);
+            C.caligula.startup.bootstrap(config, next);
         }
     ], function (error, result) {
         if (error) {
