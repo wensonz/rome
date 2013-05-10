@@ -13,7 +13,7 @@ var caligula = require('caligula'),
 cli = {
     "condotti": {
         "condotti.server.logging": {
-            "level": "INFO"
+            "level": "DEBUG"
         }
     },
     "modules": [
