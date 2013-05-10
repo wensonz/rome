@@ -87,10 +87,10 @@ Condotti.add('caligula.handlers.cli', function (C) {
         C.async.waterfall([
             function (next) {
                 message = 'Bootstraping new Condotti instance with config ' +
-                          C.lang.reflect.inspect(this.config_);
+                          C.lang.reflect.inspect(self.config_);
                 self.logger_.debug(message + ' ...');
                 
-                C.caligula.startup.bootstrap(this.config_, next);
+                C.caligula.startup.bootstrap(self.config_, next);
             },
             function (newC, next) {
                 self.logger_.debug(message + ' succeed.');
