@@ -41,7 +41,7 @@ Condotti.add('caligula.startup.simple', function (C) {
             C.debug(message + ' ...');
             
             try {
-                json = require(file);
+                json = C.require(file);
                 C.lang.merge(config, json);
             } catch (e) {
                 C.error(message + ' failed. Error: ' + e.toString());
