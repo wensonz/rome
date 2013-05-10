@@ -26,9 +26,49 @@ Condotti.add('caligula.handlers.cli', function (C) {
          * @type Object
          */
         this.config_ = config;
+        
+        /* initialize */
+        this.initialize_();
     }
     
     C.lang.inherit(ServiceHandler, C.caligula.handlers.Handler);
+    
+    /**
+     * Initialize this handler
+     * 
+     * @method initialize_
+     */
+    ServiceHandler.prototype.initialize_ = function () {
+        var file = null,
+            json = null,
+            message = null;
+            
+        /* Loading the application specific configuration from config.json under
+         * current directory
+         */
+        file = C.natives.path.resolve(C.process.cwd(), 'config.json');
+        if (!C.natives.fs.existsSync(file)) {
+            this.logger_.warn('Application specified configuration file ' + 
+                              file + ' does not exist.');
+        } else {
+            message = 'Loading application-specific configuration from "' + 
+                      file + '"';
+            this.logger_.debug(message + ' ...');
+            
+            try {
+                json = C.require(file);
+                C.lang.merge(this.config_, json);
+            } catch (e) {
+                C.error(message + ' failed. Error: ' + e.toString());
+                // TODO: throw new customized error
+                throw e;
+            }
+            
+            this.logger_.debug(message + ' succeed.');
+            this.logger_.debug('Merged config: ' + 
+                               C.lang.reflect.inspect(this.config_));
+        }
+    };
     
     /**
      * Handle the "start" command

@@ -23,7 +23,7 @@ function chaos (config, callback) {
                 'caligula': natives.path.resolve(__dirname, '../lib'),
             }
         },
-        'condotti.server.logging': { 'level': 'INFO' }
+        'condotti.server.logging': { 'level': 'DEBUG' }
     };
     
     C = condotti.Condotti(base); // a bootstrap Condotti instance for helping 

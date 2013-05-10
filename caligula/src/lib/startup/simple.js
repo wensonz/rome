@@ -28,31 +28,6 @@ Condotti.add('caligula.startup.simple', function (C) {
         C.lang.merge(base, config);
         C.lang.merge(config, base);
         
-        /* Loading the application specific configuration from config.json under
-         * current directory
-         */
-        file = C.natives.path.resolve(C.process.cwd(), 'config.json');
-        if (!C.natives.fs.existsSync(file)) {
-            C.warn('Application specified configuration file ' + file + 
-                   ' does not exist.');
-        } else {
-            message = 'Loading application-specific configuration from "' + 
-                      file + '"';
-            C.debug(message + ' ...');
-            
-            try {
-                json = C.require(file);
-                C.lang.merge(config, json);
-            } catch (e) {
-                C.error(message + ' failed. Error: ' + e.toString());
-                // TODO: throw new customized error
-                throw e;
-            }
-            
-            C.info(message + ' succeed.');
-            C.debug('Merged config: ' + C.lang.reflect.inspect(config));
-        }
-        
         message = 'Bootstraping new Condotti instance';
         C.debug(message + ' ...');
         
