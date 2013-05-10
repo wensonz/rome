@@ -65,6 +65,6 @@ module.exports = function (config, callback) {
             return;
         }
         
-        C.startup.start(config, callback);
+        C.caligula.startup.start(config, callback);
     });
 };
