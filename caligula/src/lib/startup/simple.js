@@ -97,7 +97,7 @@ Condotti.add('caligula.startup.simple', function (C) {
                                   
                 C.use(config.modules, next);
             },
-            function (next) {
+            function (unused, next) {
                 C.info(message + ' succeed.');
                 
                 message = 'Initializing dotti factory with ' +
