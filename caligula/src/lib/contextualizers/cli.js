@@ -124,6 +124,10 @@ Condotti.add('caligula.contextualizers.cli', function (C) {
             index += 1;
         }
         
+        if (!options.hasOwnProperty(name)) { // a boolean option
+            options[name] = true;
+        }
+        
         return index;
     };
     
@@ -174,6 +178,10 @@ Condotti.add('caligula.contextualizers.cli', function (C) {
             }
             
             index += 1;
+        }
+        
+        if (!options.hasOwnProperty(name)) { // a boolean option
+            options[name] = true;
         }
         
         return index;

@@ -59,17 +59,14 @@ Condotti.add('caligula.actions.cli', function (C) {
      */
     CliAction.prototype.done = function (data, meta) {
         // TODO: check the data
-        var content = null,
-            body = null,
-            status = (meta && meta.status) || 0;
+        var code = (meta && meta.code) || 0;
             
-        content = {
-            result: data
-        };
-        body = JSON.stringify(content, null, 4);
+        if (C.lang.reflect.getObjectType(data) !== String) {
+            data = JSON.stringify(data, null, 4);
+        }
         
-        this.output.write(body);
-        C.process.exit(status);
+        this.output.write(data);
+        C.process.exit(code);
     };
     
     /**
@@ -82,23 +79,12 @@ Condotti.add('caligula.actions.cli', function (C) {
      * @param {Object} meta the meta data for this error output
      */
     CliAction.prototype.error = function (error, meta) {
-        var content = null,
-            body = null,
-            status = (meta && meta.status) || error.status || 500;
+        var code = (meta && meta.code) || error.code || 1;
         
         // TODO: check the type of error
         
-        content = {
-            error: {
-                code: error.code,
-                message: error.message
-            }
-        };
-        
-        body = JSON.stringify(content, null, 4);
-        
-        this.error.write(body);
-        C.process.exit(status);
+        this.error.write(error.message);
+        C.process.exit(code);
     };
 
     /**

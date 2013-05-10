@@ -1,0 +1,115 @@
+#!/usr/bin/env node
+
+/**
+ * This module contains the implementation of the HTTP API server for project
+ * ROME.
+ * 
+ * @module rome
+ */
+var caligula = require('caligula'),
+    cli = null,
+    http = null;
+
+cli = {
+    "condotti": {
+        "condotti.server.logging": {
+            "level": "INFO"
+        }
+    },
+    "modules": [
+        "caligula.actions.cli",
+        "caligula.apps.cli",
+        "caligula.contextualizers.cli",
+        "caligula.errors.cli",
+        "caligula.handlers.cli",
+        "caligula.routing.router"
+    ],
+    "dotti": {
+        "app": {
+            "type": "caligula.apps.CliApp",
+            "params": {
+                "0": { "value": {}},
+                "1": { "reference": "contextualizer" },
+                "2": { "reference": "router" }
+            }
+        },
+        "contextualizer": {
+            "type": "caligula.contextualizers.CliContextualizer",
+            "params": {}
+        },
+        "router": {
+            "type": "caligula.routing.Router",
+            "params": {
+                "0": { "value": {
+                    "": "handlers.service"
+                }},
+                "1": { "reference": "dotti-factory" }
+            }
+        },
+        "handlers.service": {
+            "type": "caligula.handlers.ServiceHandler",
+            "params": {
+                "0": { "value": http }
+            }
+        }
+    }
+
+};
+
+http = {
+    "condotti": {
+        "condotti.server.logging": {
+            "level": "DEBUG"
+        }
+    },
+    "modules": [
+        "caligula.actions.http",
+        "caligula.apps.connect",
+        "caligula.contextualizers.http",
+        "caligula.errors.http",
+        "caligula.handlers.http",
+        "caligula.routing.router",
+        "caligula.component.loaders.local"
+    ],
+    "dotti": {
+        "app": {
+            "type": "caligula.apps.ConnectApp",
+            "params": {
+                "0": { "value": {
+                    "port": 8080,
+                    "address": "",
+                    "middlewares": [
+                        { "name": "connect.json" }
+                    ]
+                }},
+                "1": { "reference": "contextualizer" },
+                "2": { "reference": "router" }
+            }
+        },
+        "contextualizer": {
+            "type": "caligula.contextualizers.HttpContextualizer",
+            "params": {}
+        },
+        "router": {
+            "type": "caligula.routing.Router",
+            "params": {
+                "1": { "reference": "dotti-factory" }
+            }
+        },
+        "component-loader": {
+            "type": "caligula.component.loaders.LocalComponentLoader",
+            "params": {
+                "1": { "reference": "dotti-factory" }
+            }
+        }
+    }
+
+};
+
+caligula(cli, function (error) {
+    var code = 1;
+    if (error) {
+        code = error.code || 1;
+        process.exit(code);
+    }
+});
