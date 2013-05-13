@@ -7,107 +7,27 @@
  * @module rome
  */
 var caligula = require('caligula'),
-    cli = null,
-    http = null;
+    config = null;
 
-http = {
-    "condotti": {
-        "condotti.server.logging": {
-            "level": "DEBUG"
-        }
-    },
-    "modules": [
-        "caligula.actions.http",
-        "caligula.apps.connect",
-        "caligula.contextualizers.http",
-        "caligula.errors.http",
-        "caligula.handlers.http",
-        "caligula.routing.router",
-        "caligula.component.loaders.local"
-    ],
+config = {
     "dotti": {
-        "app": {
-            "type": "caligula.apps.ConnectApp",
-            "params": {
-                "0": { "value": {
-                    "port": 8080,
-                    "address": "",
-                    "middlewares": [
-                        { "name": "connect.json" }
-                    ]
-                }},
-                "1": { "reference": "contextualizer" },
-                "2": { "reference": "router" }
-            }
-        },
-        "contextualizer": {
-            "type": "caligula.contextualizers.HttpContextualizer",
-            "params": {}
-        },
         "router": {
-            "type": "caligula.routing.Router",
-            "params": {
-                "1": { "reference": "dotti-factory" }
-            }
-        },
-        "component-loader": {
-            "type": "caligula.component.loaders.LocalComponentLoader",
-            "params": {
-                "1": { "reference": "dotti-factory" }
-            }
-        }
-    }
-
-};
-
-
-cli = {
-    "condotti": {
-        "condotti.server.logging": {
-            "level": "DEBUG"
-        }
-    },
-    "modules": [
-        "caligula.actions.cli",
-        "caligula.apps.cli",
-        "caligula.contextualizers.cli",
-        "caligula.errors.cli",
-        "caligula.handlers.cli",
-        "caligula.routing.router"
-    ],
-    "dotti": {
-        "app": {
-            "type": "caligula.apps.CliApp",
-            "params": {
-                "0": { "value": {}},
-                "1": { "reference": "contextualizer" },
-                "2": { "reference": "router" }
-            }
-        },
-        "contextualizer": {
-            "type": "caligula.contextualizers.CliContextualizer",
-            "params": {}
-        },
-        "router": {
-            "type": "caligula.routing.Router",
             "params": {
                 "0": { "value": {
                     "": "handlers.service"
-                }},
-                "1": { "reference": "dotti-factory" }
+                }}
             }
         },
         "handlers.service": {
             "type": "caligula.handlers.ServiceHandler",
             "params": {
-                "0": { "value": http }
+                "0": { "value": caligula.defaults.http }
             }
         }
     }
-
 };
 
-caligula.bootstrap(cli, function (error, C) {
+caligula.bootstrap(config, function (error, C) {
     var factory = null,
         app = null;
     
@@ -116,7 +36,7 @@ caligula.bootstrap(cli, function (error, C) {
         process.exit(error.code || 1);
     }
     
-    factory = new C.di.DottiFactory(cli.dotti);
+    factory = new C.di.DottiFactory(config.dotti);
     app = factory.get('app');
     app.run();
 });

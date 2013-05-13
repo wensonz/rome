@@ -5,34 +5,28 @@
  * @module caligula
  */
 var condotti = require('condotti'),
-    natives = require('natives');
+    natives = require('natives'),
+    defaults = require('./config/defaults.json');
 
 function bootstrap (config, callback) {
-    var C = null;
+    var C = null,
+        merged = {},
+        base = null;
     
-    if (!config.condotti) {
-        callback(new TypeError('Configuration for Condotti instance is ' +
-                               'expected to be property of the passed-in ' +
-                               'param "config" with name "condotti", but' +
-                               Object.prototype.toString.call(config.condotti) +
-                               ' is found.'));
-        return;
-    }
+    C = new condotti.Condotti();
+    // TODO: use C.validators to check the param
     
-    if ('object' !== typeof config.condotti) {
-        callback(new TypeError('Configuration for Condotti instance is ' +
-                               'expected to be an object, but a ' + 
-                               (typeof config.condotti) + ' is found.'));
-        return;
-    }
+    base = {
+        'loader': {
+            'baseUrl': process.cwd(),
+            'paths': {
+                'caligula': natives.path.resolve(__dirname, 'lib'),
+            }
+        }
+    };
     
-    config.condotti.loader = config.condotti.loader || {};
-    // overwrite the baseUrl
-    config.condotti.loader.baseUrl = process.cwd();
-    // overwrite the caligula path
-    config.condotti.loader.paths = config.condotti.loader.paths || {};
-    config.condotti.loader.paths.caligula = natives.path.resolve(__dirname, 
-                                                                 'lib');
+    C.lang.merge(base, defaults, config);
+    config = base;
     
     C = new condotti.Condotti(config.condotti);
     
@@ -47,3 +41,4 @@ function bootstrap (config, callback) {
 }
 
 module.exports.bootstrap = bootstrap;
+module.exports.defaults = defaults;
