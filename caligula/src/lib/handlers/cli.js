@@ -41,8 +41,24 @@ Condotti.add('caligula.handlers.cli', function (C) {
     ServiceHandler.prototype.initialize_ = function () {
         var file = null,
             json = null,
-            message = null;
-            
+            message = null,
+            base = null;
+        
+        base = {
+            'condotti': {
+                'loader': {
+                    'baseUrl': C.process.cwd(),
+                    'paths': {
+                        'caligula': C.natives.path.resolve(__dirname, '../'),
+                        'caligula.components': './components'
+                    }
+                }
+            }
+        };
+        
+        C.lang.merge(base, this.config_);
+        this.config_ = base;
+        
         /* Loading the application specific configuration from config.json under
          * current directory
          */
@@ -82,7 +98,9 @@ Condotti.add('caligula.handlers.cli', function (C) {
         //       add cluster support
         
         var message = null,
-            self = this;
+            self = this,
+            factory = null,
+            newC = null;
             
         C.async.waterfall([
             function (next) {
@@ -90,23 +108,50 @@ Condotti.add('caligula.handlers.cli', function (C) {
                           C.lang.reflect.inspect(self.config_);
                 self.logger_.debug(message + ' ...');
                 
-                C.caligula.startup.bootstrap(self.config_, next);
+                newC = new Condotti(self.config_.condotti);
+                newC.use(self.config_.modules, next);
             },
-            function (newC, next) {
+            function (unused, next) {
+                var loader = null;
+                    
                 self.logger_.debug(message + ' succeed.');
-                message = 'Starting service';
-                self.logger_.debug(message + ' ...');
-                newC.caligula.startup.start(self.config_, next);
+                self.logger_.info('Context is switched to new Condotti ' +
+                                  'instance');
+                
+                message = 'Initializing dotti facotry with config ' + 
+                          newC.lang.reflect.inspect(self.config_.dotti) + 
+                          ', and loading the components';
+                newC.debug(message + ' ...');
+                
+                factory = new newC.di.DottiFactory(self.config_.dotti);
+                loader = factory.get('component-loader');
+                if (!loader) {
+                    newC.warn('Component loader is not specified.');
+                    next();
+                    return;
+                }
+                
+                loader.loadAll(next);
+            },
+            function (next) {
+                var app = null;
+                
+                newC.debug(message + ' succeed.');
+                message = 'Service is running';
+                newC.debug(message + ' ...');
+                app = factory.get('app');
+                app.run(next);
             }
         ], function (error, result) {
             if (error) {
-                self.logger_.debug(message + ' failed. Error: ' +
-                                   C.lang.reflect.inspect(error));
+                newC.debug(message + ' failed. Error: ' +
+                           newC.lang.reflect.inspect(error));
                 action.error(error);
                 return;
             }
             
-            self.logger_.info('Service is terminated.');
+            newC.info('Service is terminated with result ' +
+                      newC.lang.reflect.inspect(result));
             action.done(result);
         });
     };

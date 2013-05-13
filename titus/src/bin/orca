@@ -1,0 +1,72 @@
+#!/usr/bin/env node
+/**
+ * This module is the main entrance of the client daemon for the Orchestration
+ * component of the project ROME.
+ *
+ * @module orca
+ */
+
+var caligula = require('caligula'),
+    bootstrap = null;
+
+bootstrap = {
+    "condotti": {
+        "condotti.server.logging": {
+            "level": "DEBUG"
+        }
+    },
+    "modules": [
+        "caligula.actions.cli",
+        "caligula.apps.cli",
+        "caligula.contextualizers.cli",
+        "caligula.errors.cli",
+        "caligula.handlers.cli",
+        "caligula.routing.router"
+    ],
+    "dotti": {
+        "app": {
+            "type": "caligula.apps.CliApp",
+            "params": {
+                "0": { "value": {}},
+                "1": { "reference": "contextualizer" },
+                "2": { "reference": "router" }
+            }
+        },
+        "contextualizer": {
+            "type": "caligula.contextualizers.CliContextualizer",
+            "params": {}
+        },
+        "router": {
+            "type": "caligula.routing.Router",
+            "params": {
+                "0": { "value": {
+                    "": "handlers.service"
+                }},
+                "1": { "reference": "dotti-factory" }
+            }
+        },
+        "handlers.service": {
+            "type": "caligula.handlers.ServiceHandler",
+            "params": {
+                "0": { "value": http }
+            }
+        }
+    }
+
+};
+
+caligula.bootstrap(bootstrap, function (error, C) {
+    
+    var factory = null,
+        app = null;
+    
+    if (error) {
+        process.stderr.write(error.toString());
+        process.exit(error.code || 1);
+    }
+    
+    factory = new C.di.DottiFactory(bootstrap.dotti);
+    app = factory.get('app');
+    
+    app.run();
+});
