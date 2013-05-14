@@ -29,14 +29,16 @@ function bootstrap(config) {
     });
     
     C.lang.merge(config, {
-        'dotti': { 'router': { 'params': { '0': { 'value': {
-            '': 'handlers.rome'
-        }}}}},
-        'handlers.rome': {
-            'type': 'caligula.handlers.RomeHandler',
-            'params': { '0': {
-                'value': caligula.defaults.http
-            }}
+        'dotti': { 
+            'router': { 'params': { '0': { 'value': {
+                '': 'handlers.rome'
+            }}}},
+            'handlers.rome': {
+                'type': 'caligula.handlers.RomeHandler',
+                'params': { '0': {
+                    'value': caligula.defaults.http
+                }}
+            }
         }
     });
     return new condotti.Condotti(config.condotti);
