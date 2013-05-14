@@ -180,5 +180,7 @@ Condotti.add('caligula.handlers.rome', function (C) {
             action.done(result);
         });
     };
+    
+    C.namespace('caligula.handlers').RomeHandler = RomeHandler;
 
 }, '0.0.1', { requires: ['caligula.handlers.base'] });
