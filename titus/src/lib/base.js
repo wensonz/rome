@@ -56,7 +56,7 @@ Condotti.add('caligula.components.orca.base', function (C) {
             self.logger_.debug(message + ' succeed.');
             
             socket.on('exec', function (data) {
-                C.process.stdout.print('exec ' + data);
+                C.process.stdout.write('exec ' + data);
                 socket.emit('exec', { stat: 'OK' });
             });
             

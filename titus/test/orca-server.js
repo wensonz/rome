@@ -13,7 +13,7 @@ io.sockets.on('connection', function (socket) {
             process.exit(0);
         });
     });
-    socket.emit('exec', { id:123 });
+    socket.emit('exec', 'echo "hello world!"');
 });
 
 console.log('>>> Server is running ...');
