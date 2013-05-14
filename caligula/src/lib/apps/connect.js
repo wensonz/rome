@@ -16,7 +16,7 @@ Condotti.add('caligula.apps.connect', function (C) {
      *                        listening port, etc.
      * @param {Contextualizer} contextualizer the contextualizer used to 
      *                                        contextualize the incoming HTTP
-     *                                        request to ActionContext instance
+     *                                        request to HttpAction instance
      * @param {Router} router the router for routing the action context instance
      *                        to its correct handler and invoke the handler to
      *                        complete the processing of the request
@@ -171,7 +171,9 @@ Condotti.add('caligula.apps.connect', function (C) {
             }
             
             self.logger_.debug('Action ' + action.name + 
-                               ' is contextualized successfully.');
+                               ' is contextualized successfully. Action: ' +
+                               C.lang.reflect.inspect(action));
+                               
             self.logger_.debug('Routing the contextualized action ...');
             self.router_.route(action);
         });

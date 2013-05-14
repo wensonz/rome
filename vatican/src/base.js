@@ -170,6 +170,7 @@ Condotti.add('caligula.components.data.base', function (C) {
         this.execute_(action, action.data, 'update', 'Updating');
     };
     
+    // Add validator
     DataHandler.prototype.update = Handler.validate(
         DataHandler.prototype.update,
         new V.ObjectValidator('action', {

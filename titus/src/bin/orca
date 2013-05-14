@@ -1,0 +1,45 @@
+#!/usr/bin/env node
+/**
+ * This module is the main entrance of the client daemon for the Orchestration
+ * component of the project ROME.
+ *
+ * @module orca
+ */
+
+var caligula = require('caligula'),
+    config = null;
+
+config = {
+    "dotti": {
+        "router": {
+            "params": {
+                "0": { "value": {
+                    "": "handlers.service"
+                }}
+            }
+        },
+        "handlers.service": {
+            "type": "caligula.handlers.ServiceHandler",
+            "params": {
+                "0": { "value": null }
+            }
+        }
+    }
+};
+
+
+caligula.bootstrap(config, function (error, C) {
+    
+    var factory = null,
+        app = null;
+    
+    if (error) {
+        process.stderr.write(error.toString());
+        process.exit(error.code || 1);
+    }
+    
+    factory = new C.di.DottiFactory(config.dotti);
+    app = factory.get('app');
+    
+    app.run();
+});
