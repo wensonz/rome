@@ -26,7 +26,7 @@ fi
 
 if ! [ -d $CWD/../../../condotti/bootstrap/build ]; then
     echo "Condotti has not been built. Building it now ...";
-    make -C $CWD/../../../condotti/bootstrap
+    make -C $CWD/../../../condotti/bootstrap server
 fi
 
 export NODE_PATH="$CWD/../../../condotti/bootstrap/build:$CWD/../src/:$NODE_PATH"
