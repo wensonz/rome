@@ -3,15 +3,23 @@
         "router": {
             "params": {
                 "0": { "value": {
-                    "": "handlers.default"
+                    "data": "handlers.data"
                 }}
             }
         },
-        "handlers.default": {
-            "type": "caligula.handlers.HttpHandler",
+        "handlers.data": {
+            "type": "caligula.handlers.DataHandler",
             "params": {
-                "0": { "value": { "baseUrl": "http://localhost:8081" }},
-                "1": { "reference": "contextualizer" }
+                "0": { "value": {}},
+                "1": { "reference": "configuration-connection-factory" }
+            }
+        },
+        "configuration-connection-factory": {
+            "type": "caligula.db.mongo.MongoConnectionFactory",
+            "params": {
+                "0": { "value": {
+                    "url": "mongodb://stage-mongodb.rome.cluster.sina.com.cn:9010/wensonz"
+                }}
             }
         }
     }
