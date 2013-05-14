@@ -29,4 +29,5 @@ if ! [ -d $CWD/../../../condotti/bootstrap/build ]; then
     make -C $CWD/../../../condotti/bootstrap
 fi
 
-NODE_PATH="$CWD/../../../condotti/bootstrap/build:$CWD/../src/:$NODE_PATH" node $CWD/../src/bin/rome start
+export NODE_PATH="$CWD/../../../condotti/bootstrap/build:$CWD/../src/:$NODE_PATH"
+node $CWD/../src/bin/rome start
