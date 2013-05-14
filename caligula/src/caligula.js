@@ -5,7 +5,7 @@
  * @module caligula
  */
 var path = require('path'),
-    defaults = require('./config/defaults.json');
+    defaults = require(path.resolve(__dirname, 'config/defaults.json'));
 
 module.exports.path = path.resolve(__dirname, 'lib');
 module.exports.defaults = defaults;
