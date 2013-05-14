@@ -11,7 +11,7 @@ if ! [ -d $CWD/components/data ]; then
         echo "Vatican does not exist in $CWD/../../vatican/src";
         exit 1;
     fi
-    ln -sf $CWD/../../vatican/src $CWD/components/data;
+    ln -sf ../../../vatican/src $CWD/components/data;
 fi
 
 if ! [ -d $CWD/../../../condotti ]; then
