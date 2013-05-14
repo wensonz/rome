@@ -1,22 +1,21 @@
 /**
- * This module contains the class of BootstrapHandler, which is designed to
- * bootstrap an application from configuration.
+ * This module contains the implementation of the RomeHandler, which is designed
+ * to handle the CLI request for HTTP API server of project ROME.
  * 
- * @module caligula.handlers.bootstrap
+ * @module caligula.handlers.rome
  */
-Condotti.add('caligula.handlers.bootstrap', function (C) {
-    
+Condotti.add('caligula.handlers.rome', function (C) {
+
     /**
-     * This BootstrapHandler class is a child class of Handler, and is designed
-     * to handle the request on bootstrap a entirely new application from the
-     * user-specified configuration.
+     * This RomeHandler is a child class of Handler, and designed to handle the
+     * CLI request for HTTP API server of project ROME.
      * 
-     * @class BootstrapHandler
+     * @class RomeHandler
      * @constructor
      * @extends Handler
      * @param {Object} config the config object for this handler
      */
-    function BootstrapHandler (config) {
+    function RomeHandler (config) {
         /* inheritance */
         this.super();
         
@@ -28,18 +27,28 @@ Condotti.add('caligula.handlers.bootstrap', function (C) {
          */
         this.config_ = config;
         
+        /**
+         * The application for this HTTP API server
+         * 
+         * @property app_
+         * @type App
+         * @default null
+         */
+        this.app_ = null;
+        
         /* initialize */
         this.initialize_();
     }
     
-    C.lang.inherit(BootstrapHandler, C.caligula.handlers.Handler);
+    C.lang.inherit(RomeHandler, C.caligula.handlers.Handler);
     
     /**
      * Initialize this handler
      * 
      * @method initialize_
      */
-    BootstrapHandler.prototype.initialize_ = function () {
+    RomeHandler.prototype.initialize_ = function () {
+        
         var file = null,
             json = null,
             message = null,
@@ -88,12 +97,15 @@ Condotti.add('caligula.handlers.bootstrap', function (C) {
     };
     
     /**
-     * Handle the bootstrap request with the this handler object itself
+     * Bootstrap the new Condotti context and initiate the HTTP API server
      * 
-     * @method call
-     * @param {Action} action the bootstrap action to be handled
+     * @method bootstrap_
+     * @param {Function} callback the callback function to be invoked after the
+     *                            HTTP server is stopped, or some error occurs.
+     *                            The signature of the callback is 
+     *                            'function (error, result) {}'
      */
-    BootstrapHandler.prototype.call = function (action) {
+    RomeHandler.prototype.bootstrap_ = function (callback) {
         var message = null,
             self = this,
             factory = null,
@@ -131,26 +143,42 @@ Condotti.add('caligula.handlers.bootstrap', function (C) {
                 loader.loadAll(next);
             },
             function (next) {
-                var app = null;
                 
                 newC.debug(message + ' succeed.');
                 message = 'Service is running';
                 newC.debug(message + ' ...');
-                app = factory.get('app');
-                app.run(next);
+                self.app_ = factory.get('app');
+                self.app_.run(next);
             }
         ], function (error, result) {
             if (error) {
                 newC.debug(message + ' failed. Error: ' +
                            newC.lang.reflect.inspect(error));
-                action.error(error);
+                callback(error);
                 return;
             }
             
             newC.info('Service is terminated with result ' +
                       newC.lang.reflect.inspect(result));
-            action.done(result);
+            callback(null, result);
         });
     };
     
-}, '0.0.1', { requires: ['caligula.handlers.base']});
+    /**
+     * Handle the "start" command
+     * 
+     * @method start
+     * @param {Action} action the "start" action to be handled
+     */
+    RomeHandler.prototype.start = function (action) {
+        this.bootstrap_(function (error, result) {
+            if (error) {
+                action.error(error);
+                return;
+            }
+            
+            action.done(result);
+        });
+    };
+
+}, '0.0.1', { requires: ['caligula.handlers.base'] });
