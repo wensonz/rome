@@ -264,7 +264,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                           C.lang.reflect.inspect(merged.context);
                 self.logger_.debug(message + ' ...');
                 
-                self.processResources_(action, merged dependencies, next);
+                self.processResources_(action, merged, dependencies, next);
             }
         ], function (error, result) {
             if (error) {
@@ -398,7 +398,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
             
             processor = self.factory_.get(self.resources_ + '.' + resource.type);
             // TODO: add processor factory?
-            processor.process(action, resource, context, configurations, 
+            processor.process(action, name, resource, context, configurations, 
                               function (error, result) {
                 if (error) {
                     self.logger_.debug(message + ' failed. Error: ' +
