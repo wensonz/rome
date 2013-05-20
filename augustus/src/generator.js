@@ -264,7 +264,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                           C.lang.reflect.inspect(merged.context);
                 self.logger_.debug(message + ' ...');
                 
-                self.processResources_(merged, next);
+                self.processResources_(action, merged dependencies, next);
             }
         ], function (error, result) {
             if (error) {
@@ -358,16 +358,27 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
     };
     
     /**
-     * Process the resources with the passed in data
+     * Process the resources with the passed in data. The signature of the
+     * processor is:
+     *     function (action, resource, context, configurations, callback) {}
+     * where 'resource' is one member of the property 'resources' of the merged
+     * configuration data and 'context' is the very property of the merged data.
+     * For 'action', 'configurations' and 'callback', please check the 
+     * corresponding descriptions below.
      * 
      * @method processResources_
+     * @param {Action} action the generation action to be handled
      * @param {Object} data the data contains the resources and other context
+     * @param {Array} configurations the list of configurations related with
+     *                               this generation
      * @param {Function} callback the callback function to be invoked when the
      *                            resource processors are executed successfully,
      *                            or some error occurs. The signature of the 
      *                            callback is 'function (error, result) {}'
      */
-    GenerationHandler.prototype.processResources_ = function (data, callback) {
+    GenerationHandler.prototype.processResources_ = function (action, data, 
+                                                              configurations,
+                                                              callback) {
         var self = this,
             resources = data.resources,
             context = data.context,
@@ -387,7 +398,8 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
             
             processor = self.factory_.get(self.resources_ + '.' + resource.type);
             // TODO: add processor factory?
-            processor.process(resource, context, function (error, result) {
+            processor.process(action, resource, context, configurations, 
+                              function (error, result) {
                 if (error) {
                     self.logger_.debug(message + ' failed. Error: ' +
                                        C.lang.reflect.inspect(error));
