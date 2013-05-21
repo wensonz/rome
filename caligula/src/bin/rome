@@ -6,37 +6,66 @@
  * 
  * @module rome
  */
-var caligula = require('caligula'),
-    config = null;
+var condotti = require('condotti'),
+    caligula = require('caligula');
 
-config = {
-    "dotti": {
-        "router": {
-            "params": {
-                "0": { "value": {
-                    "": "handlers.service"
+function bootstrap(config) {
+    /*
+    config = C.lang.clone(caligula.defaults.cli);
+    value = C.namespace.call(config, 'dotti.router.params.0.value');
+    */
+    var C = null;
+    
+    C = new condotti.Condotti();
+    C.lang.merge(config, C.lang.clone(caligula.defaults.cli));
+    
+    config.modules.push('caligula.handlers.rome');
+    
+    C.lang.merge(config, {
+        'condotti': { 'loader': {
+            'baseUrl': process.cwd(),
+            'paths': { 'caligula': caligula.path }
+        }}
+    });
+    
+    C.lang.merge(config, {
+        'dotti': { 
+            'router': { 'params': { '0': { 'value': {
+                '': 'handlers.rome'
+            }}}},
+            'handlers.rome': {
+                'type': 'caligula.handlers.RomeHandler',
+                'params': { '0': {
+                    'value': caligula.defaults.http
                 }}
             }
-        },
-        "handlers.service": {
-            "type": "caligula.handlers.ServiceHandler",
-            "params": {
-                "0": { "value": caligula.defaults.http }
-            }
         }
-    }
-};
+    });
+    return new condotti.Condotti(config.condotti);
+}
 
-caligula.bootstrap(config, function (error, C) {
-    var factory = null,
-        app = null;
+function main() {
+    var C = null,
+        config = {};
     
-    if (error) {
-        process.stderr.write(error.toString());
-        process.exit(error.code || 1);
-    }
-    
-    factory = new C.di.DottiFactory(config.dotti);
-    app = factory.get('app');
-    app.run();
-});
+    C = bootstrap(config);
+    C.use(config.modules, function (error, unused) {
+        var factory = null,
+            app = null;
+            
+        if (error) {
+            process.stderr.write(error.toString());
+            // TODO: exit code handling
+            process.exit(1);
+        }
+        
+        factory = new C.di.DottiFactory(config.dotti);
+        app = factory.get('app');
+        // TODO: callback handling when app stopped
+        app.run();
+    });
+}
+
+if (require.main === module) {
+    main();
+}
