@@ -28,14 +28,20 @@ Condotti.add('caligula.components.configuration.resources.base', function (C) {
      * Process the resource with the passed-in context data
      * 
      * @method process
+     * @param {Action} action the action causes this processor to be executed
+     * @param {String} name the name of the resource to be processed
      * @param {Object} resource the resource object to be processed
      * @param {Object} context the context data associated with this processing
+     * @param {Array} configurations the list of configurations related with
+     *                               this generation
      * @param {Function} callback the callback function to be invoked after the
      *                            resource has been successfully processed, or
      *                            some unexpected error occurs. The signature of
      *                            the callback is 'function (error, result) {}'
      */
-    ResourceProcessor.prototype.process = function (resource, context, callback) {
+    ResourceProcessor.prototype.process = function (action, name, resource, 
+                                                    context, configurations, 
+                                                    callback) {
         callback(new C.errors.NotImplementedError('This process method is not' +
                                                   ' implemented here, and is ' +
                                                   'expected to be overwritten' +

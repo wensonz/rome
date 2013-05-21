@@ -26,6 +26,8 @@ Condotti.add('caligula.components.orca.base', function (C) {
         this.config_ = config;
     }
     
+    C.lang.inherit(OrcaHandler, C.caligula.handlers.Handler);
+    
     /**
      * Start orca
      * 
@@ -48,20 +50,25 @@ Condotti.add('caligula.components.orca.base', function (C) {
                   C.lang.reflect.inspect(this.config_.server);
         this.logger_.debug(message + ' ...');
         
-        socket = io(this.config_.server);
+        socket = io.connect(this.config_.server);
         socket.on('connect', function () {
             
             self.logger_.debug(message + ' succeed.');
             
-            socket.on('event', function (data) {
-                C.process.stdout.print('exec ' + data);
+            socket.on('exec', function (data) {
+                C.process.stdout.write('exec ' + data);
+                socket.emit('exec', { stat: 'OK' });
             });
             
         }).on('error', function (error) {
             self.logger_.debug(message + ' failed. Error: ' +
                                C.lang.reflect.inspect(error));
             action.error(error);
+        }).on('disconnect', function () {
+            action.done('Bye');
         });
     };
+    
+    C.namespace('caligula.handlers').OrcaHandler = OrcaHandler;
 
-}, '0.0.1', { requires: [] });
+}, '0.0.1', { requires: ['caligula.handlers.base'] });
