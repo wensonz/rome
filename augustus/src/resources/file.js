@@ -56,11 +56,50 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
      */
     FileResourceProcessor.prototype.process = function (resource, context, 
                                                         callback) {
-        //
-        callback();
+        var name = name || 'resourceName';
+        var self = this,
+            message = null,
+            nodeName = 'nodeName',
+            mkdirp = C.require('mkdirp'),
+            resourceRoot = this.root_ + '/' + nodeName + '/' + name,
+            metaFilePath = resourceRoot + '/init.sls';
+
+        C.async.waterfall([
+            function (next) {
+                message = 'Make resource direcotry ' + resourceRoot;
+                self.logger_.debug(message + '...');
+                mkdirp(resourceRoot, next);
+            },
+            function (made, next) {
+                var sls = {};
+
+                self.logger_.debug(message + ' succeed, Result: ' + made);
+
+                sls[resource.path] = {'file.managed': []};
+                Object.keys(resource).forEach(function (k) {
+                    var opt = {};
+                    if (['path', 'content', 'type'].indexOf(k) >= 0) {
+                        return;
+                    }
+                    opt[k] = resource[k];
+                    sls[resource.path]["file.managed"].push(opt);
+                });
+                sls[resource.path]["file.managed"].push({"makedirs": "True"});
+
+                message = 'Write meta file to disk';
+                self.logger_.debug(message + '...');
+                C.natives.fs.writeFile(metaFilePath, JSON.stringify(sls), next);
+            }
+        ], function (err, result) {
+            if (err) {
+                self.logger_.debug(message + ' faild. Error: ' + 
+                    C.lang.reflect.inspect(err));
+            }
+            self.logger_.debug(message + ' succeed. Result: ' + 
+                    C.lang.reflect.inspect(result));
+            callback(err, result);
+        });
     };
-    
+
     C.namespace('caligula.configuration.resources').FileResourceProcessor = FileResourceProcessor;
-    
-    
 }, '0.0.1', { requires: [ 'caligula.components.configuration.resources.base' ] });
