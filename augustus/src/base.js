@@ -123,7 +123,7 @@ Condotti.add('caligula.components.configuration.base', function (C) {
         this.logger_.debug(message + ' ...');
 
         action.data = { name: 'configuration', owner: id };
-        action.acquire('lock.release', function (error, result) {
+        action.acquire('lock.release', function (error) {
             action.data = params;
 
             if (error) {
@@ -134,7 +134,7 @@ Condotti.add('caligula.components.configuration.base', function (C) {
             }
 
             self.logger_.debug(message + ' succeed. ');
-            callback(null, result);
+            callback();
         });
     };
     

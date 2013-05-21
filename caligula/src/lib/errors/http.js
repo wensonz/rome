@@ -60,6 +60,28 @@ Condotti.add('caligula.errors.http', function (C) {
     
     C.namespace('caligula.errors').HttpError = HttpError;
     
+    /**********************************************************************
+     *                                                                    *
+     *                       STANDARD HTTP ERRORS                         *
+     *                                                                    *
+     **********************************************************************/
+    
+    /**
+     * Bad request.
+     *
+     * @class BadRequestError
+     * @constructor
+     * @extends HttpError
+     */
+    function BadRequestError (message) {
+        /* inheritance */
+        this.super(400, 400, message);
+    }
+    
+    C.lang.inherit(BadRequestError, HttpError);
+    
+    C.namespace('caligula.errors').BadRequestError = BadRequestError;
+    
     /**
      * This type of error is thrown when the incoming HTTP request or the 
      * required action can not be handled successfully due to the invalid
@@ -67,14 +89,14 @@ Condotti.add('caligula.errors.http', function (C) {
      *
      * @class InvalidArgumentError
      * @constructor
-     * @extends HttpError
+     * @extends BadRequestError
      */
     function InvalidArgumentError (message) {
         /* inheritance */
-        this.super(400, 400, message);
+        this.super(message);
     }
     
-    C.lang.inherit(InvalidArgumentError, HttpError);
+    C.lang.inherit(InvalidArgumentError, BadRequestError);
     
     C.namespace('caligula.errors').InvalidArgumentError = InvalidArgumentError;
     
@@ -97,26 +119,57 @@ Condotti.add('caligula.errors.http', function (C) {
     C.namespace('caligula.errors').InternalServerError = InternalServerError;
     
     /**
+     * Not found
+     *
+     * @class NotFoundError
+     * @constructor
+     * @extends HttpError
+     * @param {String} message the message describes this error
+     */
+    function NotFoundError (message) {
+        /* inheritance */
+        this.super(404, 404, message);
+    }
+    
+    C.lang.inherit(NotFoundError, HttpError);
+    
+    C.namespace('caligula.errors').NotFoundError = NotFoundError;
+    
+    /**
      * This type of error is thrown when the action handler can not be found
      * in the routing tree by the router
      *
      * @class ActionHandlerNotFoundError
      * @constructor
-     * @extends C.errors.HttpError
+     * @extends NotFoundError
      * @param {String} message the message describes this error
      */
     function ActionHandlerNotFoundError (message) {
         /* inheritance */
-        this.super(404, 404, message);
-        
-        this.name = 'ActionHandlerNotFoundError';
+        this.super(message);
     }
     
-    C.lang.inherit(ActionHandlerNotFoundError, HttpError);
+    C.lang.inherit(ActionHandlerNotFoundError, NotFoundError);
     
     C.namespace('caligula.errors').ActionHandlerNotFoundError = 
         ActionHandlerNotFoundError;
     
+    /**
+     * Not acceptable
+     *
+     * @class NotAcceptableError
+     * @constructor
+     * @extends HttpError
+     * @param {String} message the message describes this error
+     */
+    function NotAcceptableError (message) {
+        /* inheritance */
+        this.super(406, 406, message);
+    }
+    
+    C.lang.inherit(NotAcceptableError, HttpError);
+    
+    C.namespace('caligula.errors').NotAcceptableError = NotAcceptableError;
     
     /**
      * This type of error is thrown when the action handler is found not be
@@ -125,19 +178,34 @@ Condotti.add('caligula.errors.http', function (C) {
      *
      * @class ActionHandlerNotCallableError
      * @constructor
-     * @extends C.errors.HttpError
+     * @extends NotAcceptableError
      * @param {String} message the message describes this error
      */
     function ActionHandlerNotCallableError (message) {
         /* inheritance */
-        this.super(406, 406, message);
-        
-        this.name = 'ActionHandlerNotFoundError';
+        this.super(message);
     }
     
-    C.lang.inherit(ActionHandlerNotCallableError, HttpError);
+    C.lang.inherit(ActionHandlerNotCallableError, NotAcceptableError);
     
     C.namespace('caligula.errors').ActionHandlerNotCallableError = 
         ActionHandlerNotCallableError;
+    
+    /**
+     * Conflict
+     *
+     * @class ConflictError
+     * @constructor
+     * @extends HttpError
+     * @param {String} message the message describes this error
+     */
+    function ConflictError (message) {
+        /* inheritance */
+        this.super(409, 409, message);
+    }
+    
+    C.lang.inherit(ConflictError, HttpError);
+    
+    C.namespace('caligula.errors').ConflictError = ConflictError;
     
 }, '0.0.1', { requires: [] });
