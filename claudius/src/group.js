@@ -72,7 +72,12 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 };
                 action.acquire('data.publishing.group.operation.read', next);
             },
-            
+            function (result, next) {
+                logger.done(result);
+                if (0 === result.affected) {
+                    //
+                }
+            }
         ], function(error, result) {
             //
         });
