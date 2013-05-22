@@ -34,46 +34,48 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     C.lang.inherit(GroupHandler, C.caligula.handlers.Handler);
     
     /**
-     * Create a group with the specified params.
-     * 
-     * @method create
-     * @param {Action} action the creation action to be handled
-     */
-    GroupHandler.prototype.create = function (action) {
-        //
-    };
-    
-    /**
-     * Update the user-specified group. Note that this "update" only make changes
-     * on the "scale" and "isp" properties of the specified group. To publish a 
-     * new version of package, or apply a new strategy, please use "publish" and 
-     * "apply".
-     * 
-     * @method update
-     * @param {Action} action the updating action to be handled
-     */
-    GroupHandler.prototype.update = function (action) {
-        //
-    };
-    
-    /**
-     * Delete a specified group.
-     * 
-     * @method delete
-     * @param {Action} action the deleting action to be handled
-     */
-    GroupHandler.prototype.delete = function (action) {
-        //
-    };
-    
-    /**
      * Return the current status of the user specified group
      * 
      * @method status
      * @param {Action} action the action to query current status of the group
      */
     GroupHandler.prototype.status = function (action) {
-        //
+        // TODO: 
+        //      1. Read group object
+        //      2. Read latest operation log
+        //      3. Read orchestration job
+        //      4. Construct the status object
+        
+        var self = this,
+            params = action.data,
+            log = null,
+            status = null,
+            logger = new C.caligula.utils.logging.StepLogger(this.logger_);
+        
+        C.async.waterfall([
+            function (next) { // Read the group object
+                logger.start('Reading the group details for ' + params.name);
+                action.data = { criteria: { name: params.name } };
+                action.acquire('data.publishing.group.read', next);
+            },
+            function (result, next) { // Read the most recent operation log
+                logger.done(result);
+                
+                logger.start('Reading the most recent operation log for group ' +
+                             params.name);
+                action.data = { 
+                    criteria: { group: params.name },
+                    operations: {
+                        sort: { timestamp: -1 },
+                        limit: 1
+                    }
+                };
+                action.acquire('data.publishing.group.operation.read', next);
+            },
+            
+        ], function(error, result) {
+            //
+        });
     };
     
     /**
@@ -198,40 +200,6 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         });
     };
     
-    /**
-     * Rollback the package of Weibo master site to the most recent successfully
-     * published one for this group.
-     * 
-     * @method rollback
-     * @param {Action} action the rollback action to be handled
-     */
-    GroupHandler.prototype.rollback = function (action) {
-        //
-    };
-    
-    /**
-     * Apply a new strategy to the specified group. Note that if the strategy
-     * is a file-based one, it MUST be uploaded first via the file management
-     * APIs.
-     * 
-     * @method apply
-     * @param {Action} action the application action to be handled
-     */
-    GroupHandler.prototype.apply = function (action) {
-        //
-    };
-    
-    /**
-     * Pause or resume the specified group. This action is handled via blocking
-     * or unblocking the port 80 of the backend servers.
-     * 
-     * @method pause
-     * @param {Action} action the pause/resume action to be handled
-     */
-    GroupHandler.prototype.pause = function (action) {
-        //
-    };
-    
     /**********************************************************************
      *                                                                    *
      *                        PRIVATE MEMBERS                             *
@@ -316,14 +284,15 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      * @method createOperationLog_
      * @param {Action} action the incoming action which causes this operation
      *                        log to be created
+     * @param {Object} group the group object to be operated on
      * @param {String} operation the operation to be executed, such as publish.
      * @param {Function} callback the callback function to be invoked when the
      *                            required operation log has been successfully
      *                            created, or some error occurs. The signature
      *                            of the callback is 'function (error, log)'
      */
-    GroupHandler.prototype.createOperationLog_ = function (action, operation,
-                                                           callback) {
+    GroupHandler.prototype.createOperationLog_ = function (action, group,
+                                                           operation, callback) {
         // TODO: 1. lock the operation
         //       2. call status to find the current status of the group
         //       3. add the operation log if no other operation is in processing
@@ -379,6 +348,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 self.logger_.debug(message + ' ...');
                 action.data = {
                     id: C.uuid.v4(),
+                    group: group, // the current group object backup
                     operation: operation,
                     params: params,
                     revisions: {},
@@ -433,17 +403,11 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             message = null,
             params = action.data;
         
-        // TODO: 1. create TAG
+        // TODO: -1. create TAG = Moved to the caller, since this method can not
+        //                        determine if the nginx and backends are 
+        //                        affected
         //       2. create orchestration job
         //       3. update the operation log
-        
-        C.async.waterfall([
-            function (next) {
-                message = 'Creating configuration tag "GROUP_" for this deployment'
-            }
-        ], function(error, result) {
-            //
-        });
         
         action.data = {
             nodes: targets,
@@ -490,4 +454,4 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     
     C.namespace('caligula.errors').OperationConflictError = OperationConflictError;
 
-}, '0.0.1', { requires: ['caligula.handlers.base'] });
+}, '0.0.1', { requires: ['caligula.handlers.base', 'caligula.utils.logging'] });
