@@ -220,6 +220,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                 self.logger_.debug(message + ' ...');
                 // Execute 'before' filters of each configuration object in
                 // parallel
+                action.data = params;
                 self.prefilterConfigurations_(action, dependencies, next);
             },
             function (next) { // merge all configurations into one object
@@ -250,6 +251,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                           'configuration ' + C.lang.reflect.inspect(merged);
                 self.logger_.debug(message + ' ...');
                 // Execute "after" filters on merged result
+                action.data = params;
                 self.postfilterConfigurations_(action, merged, dependencies, 
                                                next);
             },
@@ -263,7 +265,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                           ' with context ' + 
                           C.lang.reflect.inspect(merged.context);
                 self.logger_.debug(message + ' ...');
-                
+                action.data = params;
                 self.processResources_(action, merged, dependencies, next);
             }
         ], function (error, result) {
