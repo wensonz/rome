@@ -80,8 +80,8 @@ Condotti.add('caligula.components.configuration.resources.service', function (C)
 
                 sls[resourceName] = {'service': [
                     'running',
-                    {'enable': True},
-                    {'reload': True}]};
+                    {'enable': true},
+                    {'reload': true}]};
 
                 message = 'Write meta file to disk';
                 self.logger_.debug(message + '...');
