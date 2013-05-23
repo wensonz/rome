@@ -6,10 +6,13 @@
  */
 Condotti.add('caligula.components.configuration.lock', function (C) {
 
+    
     var LockState = {
         LOCKED: 1,
         UNLOCKED: 0
     };
+    
+    C.namespace('caligula.lock').LockState = LockState;
     
     /**
      * This LockHandler class is designed to provide the locking service, such
@@ -25,6 +28,38 @@ Condotti.add('caligula.components.configuration.lock', function (C) {
     }
     
     C.lang.inherit(LockHandler, C.caligula.handlers.Handler);
+    
+    /**
+     * Return whether the specified lock has been acquired
+     * 
+     * @method acquired
+     * @param {Action} action the state querying action to be handled
+     */
+    LockHandler.prototype.acquired = function (action) {
+        var params = action.data;
+        
+        action.data = { criteria: { name: params.name } };
+        action.acquire('data.lock.read', function (error, result) {
+            if (error) {
+                action.error(error);
+                return;
+            }
+            
+            if (0 === result.affected) {
+                action.done({ acquired: false });
+                return;
+            }
+            
+            if ((result.data[0].state === LockState.UNLOCKED) ||
+                (result.data[0].expire <= Date.now())) {
+                
+                action.done({ acquired: false });
+                return;
+            }
+            
+            action.done({ acquired: true, owner: result.data[0].owner });
+        });
+    };
     
     /**
      * Acquire a lock. The data structure contained by action.data is like:
@@ -69,7 +104,7 @@ Condotti.add('caligula.components.configuration.lock', function (C) {
             }
             
             if (!result.affected) { // the required lock is being locked now
-                action.error(new C.caligula.errors.LockAcquiringFailedError(
+                action.error(new C.caligula.errors.ConflictError(
                     'Lock ' + params.name + 
                     ' has already been acquired by others'
                 ));
