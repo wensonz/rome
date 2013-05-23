@@ -20,17 +20,13 @@
         "configuration.resources.template": {
             "type": "caligula.configuration.resources.TemplateResourceProcessor",
             "params": {
-                "0": {"value": {
-                    "root": "/Users/real/tmp"
-                }}
+                "0": {"value": {}}
             }
         },
         "configuration.resources.file": {
             "type": "caligula.configuration.resources.FileResourceProcessor",
             "params": {
-                "0": {"value": {
-                    "root": "/Users/real/tmp"
-                }}
+                "0": {"value": {}}
             }
         },
         "handlers.data": {
