@@ -1,21 +1,19 @@
 /**
- * This module contains the implementation of file resource processor, which is
- * designed to describe a plain configuration file.
- * 
- * @module caligula.components.configuration.resources.file
+ * This module contains the implementation of service resource processor, which
+ * is designed to describe a service(running programe)
+ *
+ * @module caligula.components.configuration.resources.service
  */
-Condotti.add('caligula.components.configuration.resources.file', function (C) {
+Condotti.add('caligula.components.configuration.resources.service', function (C) {
     
     /**
-     * This FileResourceProcessor is designed to describe a plain configuration
-     * file to be deployed onto the target node
-     * 
-     * @class FileResourceProcessor
+     *
+     * @class ServiceResourceProcessor
      * @constructor
      * @extends ResourceProcessor
-     * @param {Object} config the config object for this processor
+     * @param {object} config config object for this resource handler
      */
-    function FileResourceProcessor (config) {
+    function ServiceResourceProcessor (config) {
         /* inheritance */
         this.super();
         
@@ -38,23 +36,27 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
          */
         this.root_ = this.config_.root || '/srv/salt';
     }
-    
-    C.lang.inherit(FileResourceProcessor, 
-                   C.caligula.configuration.resources.ResourceProcessor);
-    
+
+    C.lang.inherit(ServiceResourceProcessor,
+        C.caligula.configuration.resources.ResourceProcessor);
+
     /**
-     * Generate the description file for the plain configuration file with the 
-     * passed-in resource and context.
+     * Generate the description file for service with passed-in resource and
+     * context
      * 
      * @method process
+     * @param {Action} action the action causes this processor to be executed
+     * @param {String} resourceName the name of the resource to be processed
      * @param {Object} resource the resource object to be processed
      * @param {Object} context the context data associated with this processing
+     * @param {Array} configurations the list of configurations related with
+     *                               this generation
      * @param {Function} callback the callback function to be invoked after the
      *                            resource has been successfully processed, or
      *                            some unexpected error occurs. The signature of
      *                            the callback is 'function (error, result) {}'
      */
-    FileResourceProcessor.prototype.process = function (action, resourceName,
+    ServiceResourceProcessor.prototype.process = function (action, resourceName,
             resource, context, configurations, callback) {
 
         var self = this,
@@ -76,16 +78,10 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
 
                 self.logger_.debug(message + ' succeed, Result: ' + made);
 
-                sls[resource.path] = {'file.managed': []};
-                Object.keys(resource).forEach(function (k) {
-                    var opt = {};
-                    if (['path', 'content', 'type'].indexOf(k) >= 0) {
-                        return;
-                    }
-                    opt[k] = resource[k];
-                    sls[resource.path]["file.managed"].push(opt);
-                });
-                sls[resource.path]["file.managed"].push({"makedirs": "True"});
+                sls[resourceName] = {'service': [
+                    'running',
+                    {'enable': True},
+                    {'reload': True}]};
 
                 message = 'Write meta file to disk';
                 self.logger_.debug(message + '...');
@@ -102,5 +98,5 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
         });
     };
 
-    C.namespace('caligula.configuration.resources').FileResourceProcessor = FileResourceProcessor;
+    C.namespace('caligula.configuration.resources').ServiceResourceProcessor = ServiceResourceProcessor;
 }, '0.0.1', { requires: [ 'caligula.components.configuration.resources.base' ] });

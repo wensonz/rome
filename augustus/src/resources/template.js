@@ -56,22 +56,23 @@ Condotti.add('caligula.components.configuration.resources.template', function (C
      *                            some unexpected error occurs. The signature of
      *                            the callback is 'function (error, result) {}'
      */
-    TemplateResourceProcessor.prototype.process = function (resource,
-                                                            context, callback) {
-        var name = name || 'resourceName';
+    TemplateResourceProcessor.prototype.process = function (action,
+            resourceName, resource, context, configurations, callback) {
+
         var self = this,
             message = null,
-            nodeName = 'nodeName',
+            nodeName = action.data.node,
+            resourceName = resourceName.replace(/\//g, '_'),
             dust = C.require('dust'),
             mkdirp = C.require('mkdirp'),
             content = null,
             F = C.caligula.configuration.resources.FileResourceProcessor,
-            resourceRoot = this.root_ + '/' + nodeName + '/' + name,
+            resourceRoot = this.root_ + '/' + nodeName + '/' + resourceName,
             contentFile = resource.path.replace(/\//g, '_'),
             contentFilePath = resourceRoot + "/" + contentFile;
 
         content = resource.content.replace(/\n/g, '{~n}').replace(/ /g, '{~s}');
-        eval(dust.compile(content, name));
+        eval(dust.compile(content, resourceName));
 
         C.async.waterfall([
             function (next) {
@@ -84,7 +85,7 @@ Condotti.add('caligula.components.configuration.resources.template', function (C
 
                 message = 'Render template resource using dust';
                 self.logger_.debug(message + '...');
-                dust.render(name, context, next);
+                dust.render(resourceName, context, next);
             },
             function (out, next) { // save files
                 console.log(out);
@@ -97,11 +98,12 @@ Condotti.add('caligula.components.configuration.resources.template', function (C
             function (next) {
                 self.logger_.debug(message + ' succeed.');
 
-                resource.source = 'salt://' + contentFile;
+                resource.source = 'salt://' + resourceName + '/' +  contentFile;
 
                 message = 'Call FileResourceProcessor to process meta file';
                 self.logger_.debug(message + '...');
-                F.prototype.process.call(self, resource, context, next);
+                F.prototype.process.call(self, action, resourceName, resource,
+                        context, configurations, next);
             }
         ], function (err, result) {
             if (err) {

@@ -33,6 +33,14 @@
                 }}
             }
         },
+        "configuration.resources.service": {
+            "type": "caligula.configuration.resources.serviceResourceProcessor",
+            "params": {
+                "0": {"value": {
+                    "root": "/tmp"
+                }}
+            }
+        },
         "configuration.resources.file": {
             "type": "caligula.configuration.resources.FileResourceProcessor",
             "params": {
