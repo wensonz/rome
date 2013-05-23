@@ -2,11 +2,15 @@
  * This module contains the version 2 implementation of the group-based 
  * publishing APIs for Weibo master site.
  * 
- * TODO: refactor the component namespace to remove the dependency of "caligula"
- * 
  * @module caligula.components.publishing.group
  */
 Condotti.add('caligula.components.publishing.group', function (C) {
+    
+    var State = {
+        DONE: 0,
+        FAILED: 1,
+        RUNNING: 2
+    };
     
     /**
      * This GroupHandler class is a child class of Handler, and designed to
@@ -16,165 +20,206 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      * @class GroupHandler
      * @constructor
      * @extends Handler
-     * @param {Object} config the config object for this handler
      */
-    function GroupHandler (config) {
+    function GroupHandler () {
         /* inheritance */
         this.super();
-        
-        /**
-         * The config object for this handler
-         * 
-         * @property config_
-         * @type Object
-         */
-        this.config_ = config;
     }
     
     C.lang.inherit(GroupHandler, C.caligula.handlers.Handler);
     
     /**
-     * Publish a new version of package of the master site. Note that the 
-     * specified package is required to be released first via the ROME package
-     * management APIs.
-     * 
-     * @method publish
-     * @param {Action} action the publishing action to be handled
+     * Return the status of the specified group
+     *
+     * @method status
+     * @param {Action} action the status querying action to be handled
      */
-    GroupHandler.prototype.publish = function (action) {
-        // TODO: 0. check if the package exist
-        //       1. check current group state to be OK or FAIL
-        //       2. check there is no operation in process now
-        //       3. create operation log (contains 1 and 2)
-        //       4. update group data, operation, package, state, etc
-        //       5. create orchestration
-        //       6. update operation log with the orchestration job id
-        
-        var self = this,
-            params = action.data,
-            message = null,
-            package = null,
-            group = null,
-            log = null;
+    GroupHandler.prototype.status = function (action) {
+        var params = action.data,
+            self = this,
+            locked = false,
+            internal = params.internal || false,
+            group = null, // group object
+            log = null, // operation log
+            jobs = null, // orchestration jobs
+            logger = new C.caligula.utils.logging.StepLogger(this.logger_);
+            
+        // Remove the internal flag first
+        delete params.internal;
         
         C.async.waterfall([
-            function (next) { // Read the group info
-                message = 'Reading the related group info for ' + params.name;
-                self.logger_.debug(message + ' ...');
+            function (next) { // Query the lock state
+                logger.start('Querying the state of  lock "publishing.group.' +
+                             params.name + '"');
+                
+                if (internal) { // the lock is supposed to have been acquired
+                    next(null, { acquired: true });
+                    return;
+                }
+                
+                action.data = { name: 'publishing.group.' + params.name };
+                action.acquire('lock.acquired', next);
+            },
+            function (result, next) { // Read the group data
+                logger.done(result);
+                locked = result.acquired;
+                
+                logger.start('Reading the details of the group ' + params.name);
                 action.data = { name: params.name };
                 action.acquire('data.publishing.group.read', next);
             },
-            function (result, next) { // Read the infomation about the package
-                self.logger_.debug(message + ' succeed. Result: ' +
-                                   C.lang.reflect.inspect(result));
+            function (result, next) { // Read the most recent operation log
+                logger.done(result);
                 
-                message = 'Verifying the group ' + params.name + ' exist';
-                self.logger_.debug(message + ' ...');
-                
-                if (0 === result.affected) {
-                    next(new C.caligula.errors.GroupNotFoundError(
-                        'Required group ' + params.name + ' does not exist'
-                    ));
-                    return;
-                }
-                self.logger_.debug(message + ' succeed.');
-                group = result.data[0];
-                
-                message = 'Reading the package info for ' + 
-                          params.package.name + '@' + params.package.version;
-                self.logger_.debug(message + ' ...');
-                
-                action.data = { criteria: params.package };
-                action.acquire('package.read', next);
-            },
-            function (result, next) { // Create the operation log
-                self.logger_.debug(message + ' succeed. Result: ' +
-                                   C.lang.reflect.inspect(result));
-                
-                message = 'Verifying the package ' + params.package.name + '@' +
-                          params.package.version + ' exist';
-                self.logger_.debug(message + ' ...');
-                
-                if (0 === result.affected) {
-                    next(new C.caligula.errors.PackageNotFoundError(
-                        'Required package ' + params.package.name + '@' +
-                        params.package.version + ' does not exist'
-                    ));
-                    return;
+                if (result.affected > 0) {
+                    group = result.data[0];
                 }
                 
-                self.logger_.debug(message + ' succeed.');
-                package = result.data[0];
-                
-                message = 'Creating operation log for this publish action ' +
-                          'with params: ' + C.lang.reflect.inspect(params);
-                self.logger_.debug(message + ' ...');
-                self.createOperationLog_(action, 'publish', next);
-            },
-            function (result, next) { // Update the group data
-                self.logger_.debug(message + ' succeed. Result: ' +
-                                   C.lang.reflect.inspect(result));
-                
-                log = result;
-                group.state = C.caligula.constants.State.CHANGING;
-                group.operation = log.id;
-                group.package = params.package;
-                
+                logger.start('Reading the most recent operation log of the ' +
+                             'group ' + params.name);
+                //
                 action.data = {
-                    criteria: { name: params.name },
-                    update: group
+                    criteria: { 'group.name': params.name },
+                    operations: {
+                        sort: { timestamp: -1 },
+                        limit: 1
+                    }
                 };
-                
-                message = 'Updating the group ' + params.name + 
-                          ' with params: ' + C.lang.reflect.inspect(action.data);
-                self.logger_.debug(message + ' ...');
-                
-                action.acquire('data.publishing.group.update', next);
+                action.acquire('data.publishing.group.operation.read', next);
             },
-            function (result, next) { // Deployment
-                self.logger_.debug(message + ' succeed. Result: ' +
-                                   C.lang.reflect.inspect(result));
-                // TODO: double check the affected number is 1
+            function (result, next) { // Read the orchestration job data
+                logger.done(result);
                 
-                message = 'Updating the configuration changes on the ' +
-                          'affected backend servers: ' + 
-                          group.backends.toString();
-                self.logger_.debug(message + ' ...');
-                self.deploy_(action, group.backends, log, next);
+                if (0 === result.affected) {
+                    next();
+                    return;
+                }
+                
+                log = result.data[0];
+                
+                logger.start('Reading the orchestration job for operation ' +
+                             log.id + ' of group ' + params.name);
+                //
+                action.data = { 'extras': {
+                    group: params.name,
+                    operation: log.id
+                }};
+                action.acquire('orchestration.read', next);
+            },
+            function (result, next) {
+                
+                if (C.lang.reflect.isFunction(result)) {
+                    next = result;
+                    next();
+                    return;
+                }
+                
+                logger.done(result);
+                
+                if (0 === result.affected) {
+                    next();
+                    return;
+                }
+                // multi jobs
+                jobs = result.data;
+                logger.start('Query the status of orchestration jobs ' + 
+                             jobs.map(function (job) { return job.id; }));
+                             
+                // Query the status of the jobs serially
+                C.async.mapSeries(jobs, function (job, next) {
+                    action.data = { id: job.id };
+                    action.acquire('orchestration.stat', next);
+                }, next);
+            },
+            function (result, next) { // Build the status object
+                var status = {},
+                    failed = false;
+                
+                if (C.lang.reflect.isFunction(result)) {
+                    next = result;
+                    result = undefined;
+                } else {
+                    logger.done(result);
+                }
+                
+                logger.start('Building the status object for group ' + 
+                             params.name);
+                if (!group) {
+                    if (!log) { // not found
+                        next(new C.caligula.errors.GroupNotFoundError(
+                            'Required group ' + params.name + ' does not exist'
+                        ));
+                        return;
+                    }
+                    
+                    if (log.operator !== 'delete') {
+                        next(new C.caligula.errors.InternalServerError(
+                            'A "delete" operation is expected since the group ' +
+                            params.name + ' does not exist, but a "' + 
+                            log.operator + '" operation is found'
+                        ));
+                        return;
+                    }
+                    
+                    group = log.group;
+                }
+                
+                if (!jobs) { // orchestration job not created
+                    status.state = locked ? State.RUNNING : State.FAILED;
+                    next(null, status);
+                    return;
+                }
+                
+                
+                
+                // search for the minimum job state
+                status.state = result.reduce(function (min, current) { 
+                    return Math.min(min, current.job);
+                }, 2);
+                
+                status.state = (status.state + 1) % 3; // translate to State
+                
+                //
+                status.details = {};
+                jobs.forEach(function (job, index) {
+                    var detail = {},
+                        nodes = null;
+                    
+                    status.details[job.extras.category] = detail;
+                    
+                    result[index].nodes.forEach(function (node) {
+                        detail[node.node] = { state: node.stat };
+                        if (!failed && node.stat > 4) {
+                            failed = true;
+                        }
+                    });
+                });
+                
+                if ((status.state === State.DONE) && failed) {
+                    status.state = State.FAILED;
+                }
+                
+                next(null, status);
             }
-        ], function(error, result) {
+            // TODO: save status into log if DONE/FAILED
+        ], function (error, result) {
             if (error) {
-                self.logger_.error(message + ' failed. Error: ' +
-                                   C.lang.reflect.inspect(error));
+                logger.error(error);
                 action.error(error);
                 return;
             }
             
-            self.logger_.debug(message + ' succeed.');
-            action.done();
+            logger.done(status);
+            action.done(status);
         });
     };
+    
     
     /**********************************************************************
      *                                                                    *
      *                        PRIVATE MEMBERS                             *
      *                                                                    *
      **********************************************************************/
-    
-    /**
-     * Build the status object
-     *
-     * @method buildStatusObject_
-     * @param {Number} progress the progress enum
-     * @param {Object} group the group object
-     * @param {Object} log the operation log object
-     * @param {Object} deployment the deployment status object if exist
-     * @return {Object} the built status object
-     */
-    GroupHandler.prototype.buildStatusObject_ = function (progress, group, log,
-                                                          deployment) {
-        //
-    };
     
     /**
      * Lock the entire operation log collection
@@ -189,13 +234,13 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     GroupHandler.prototype.lock_ = function(action, callback) {
         var params = action.data,
             self = this,
-            message = null;
-
-        message = 'Calling lock.acquire on \'publishing.group.operation\'';
-        this.logger_.debug(message + ' ...');
-
+            logger = new C.caligula.utils.logging.StepLogger(this.logger_);
+        
+        logger.start('Calling lock.acquire on "publishing.group.' + 
+                     params.name + '"');
+        
         action.data = { 
-            name: 'publishing.group.operation', 
+            name: 'publishing.group.' + params.name, 
             lease: 5000 // max lifespan for a lock
         }; 
         
@@ -203,13 +248,12 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             action.data = params;
             
             if (error) {
-                self.logger_.debug(message + ' failed. Error: ' + 
-                                   C.lang.reflect.inspect(error));
+                logger.error(error);
                 callback(error, null);
                 return;
             }
             
-            self.logger_.debug(message + ' succeed. Owner id: ' + result);
+            logger.done(result);
             callback(null, result);
         });
     };
@@ -228,23 +272,22 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     GroupHandler.prototype.unlock_ = function(action, id, callback) {
         var params = action.data,
             self = this,
-            message = null;
+            logger = new C.caligula.utils.logging.StepLogger(this.logger_);
         
-        message = 'Calling lock.release on \'publishing.group.operation\'';
-        this.logger_.debug(message + ' ...');
+        logger.start('Calling lock.release on "publishing.group.' + 
+                     params.name + '"');
         
-        action.data = { name: 'publishing.group.operation', owner: id };
+        action.data = { name: 'publishing.group.' + params.name, owner: id };
         action.acquire('lock.release', function (error) {
             action.data = params;
             
             if (error) {
-                self.logger_.debug(message + ' failed. Error: ' + 
-                                   C.lang.reflect.inspect(error));
+                logger.error(error);
                 callback(error, null);
                 return;
             }
             
-            self.logger_.debug(message + ' succeed.');
+            logger.done();
             callback();
         });
     };
@@ -408,24 +451,5 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     };
     
     C.namespace('caligula.handlers').GroupHandler = GroupHandler;
-    
-    /**
-     * This error type is designed to be thrown when two operations are required
-     * to be executed at the same time, but their targets overlap with each
-     * other.
-     * 
-     * @class OperationConflictError
-     * @constructor
-     * @extends ConflictError
-     * @param {String} message the error message associated with this error
-     */
-    function OperationConflictError (message) {
-        /* inheritance */
-        this.super();
-    }
-    
-    C.lang.inherit(OperationConflictError, C.caligula.errors.ConflictError);
-    
-    C.namespace('caligula.errors').OperationConflictError = OperationConflictError;
 
 }, '0.0.1', { requires: ['caligula.handlers.base', 'caligula.utils.logging'] });
