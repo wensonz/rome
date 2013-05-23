@@ -152,7 +152,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                         return;
                     }
                     
-                    if (log.operator !== 'delete') {
+                    if (log.operator !== 'delete') { // no group, but not 
+                                                     // deleted either
                         next(new C.caligula.errors.InternalServerError(
                             'A "delete" operation is expected since the group ' +
                             params.name + ' does not exist, but a "' + 
@@ -162,7 +163,19 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     }
                     
                     group = log.group;
+                    
+                } else if (!log) { // group exist but no operation log
+                    status = { 
+                        state: State.DONE, 
+                        operator: 'create'
+                    };
+                    
+                    next(null, status);
                 }
+                
+                // log MUST exist
+                status.operator = log.operator;
+                status.params = log.params;
                 
                 if (!jobs) { // orchestration job not created
                     status.state = locked ? State.RUNNING : State.FAILED;
@@ -222,8 +235,53 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      */
     GroupHandler.prototype.publish = function (action) {
         var params = action.data,
-            self = this
-            logger = C.caligula.logging.getStepLogger(this.logger_);
+            self = this,
+            logger = C.caligula.logging.getStepLogger(this.logger_),
+            owner = null;
+            
+        // STEPS:
+        //  1. lock the group operation
+        //  2. query the current status
+        //  3. create operation log
+        //  4. update group data
+        //  5. create TAG
+        //  6. create orchestration job
+        //  7. return
+        
+        C.async.waterfall([
+            function (next) { // Lock the operation log 
+                logger.start('Acquiring the operation lock for group ' +
+                             params.name);
+                self.lock_(action, next);
+            },
+            function (result, next) { // Query the current status
+                logger.done(result);
+                owner = result;
+                
+                logger.start('Querying current status of group ' + params.name);
+                action.data.internal = true;
+                action.acquire(action.name.replace(/publish$/, 'status'), next);
+            },
+            function (status, next) { // Create an operation log
+                logger.done(status);
+                
+                if (status.state === State.RUNNING) {
+                    next(new C.caligula.errors.OperationConflictError(
+                        'Another "' + status.operator + '" operation is now ' +
+                        'running on the specified group ' + params.name
+                    ));
+                    return;
+                }
+                
+                if (status.operator === 'delete') {
+                    next(new C.caligula.errors.GroupGoneError(
+                        //
+                    ));
+                }
+            }
+        ], function (error, result) {
+            //
+        });
     };
     
     /**********************************************************************

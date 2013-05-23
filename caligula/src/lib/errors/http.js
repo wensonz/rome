@@ -208,4 +208,21 @@ Condotti.add('caligula.errors.http', function (C) {
     
     C.namespace('caligula.errors').ConflictError = ConflictError;
     
+    /**
+     * Gone
+     *
+     * @class GoneError
+     * @constructor
+     * @extends HttpError
+     * @param {String} message the message describes this error
+     */
+    function GoneError (message) {
+        /* inheritance */
+        this.super(410, 410, message);
+    }
+    
+    C.lang.inherit(GoneError, HttpError);
+    
+    C.namespace('caligula.errors').GoneError = GoneError;
+    
 }, '0.0.1', { requires: [] });
