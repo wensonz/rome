@@ -72,6 +72,10 @@ Condotti.add('caligula.utils.logging', function (C) {
                            C.lang.reflect.inspect(error));
     };
     
-    C.namespace('caligula.utils.logging').StepLogger = StepLogger;
+    C.namespace('caligula.logging').StepLogger = StepLogger;
+    
+    C.namespace('caligula.logging').getStepLogger = function (logger) {
+        return new StepLogger(logger);
+    };
 
 }, '0.0.1', { requires: [] });

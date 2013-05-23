@@ -42,7 +42,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             group = null, // group object
             log = null, // operation log
             jobs = null, // orchestration jobs
-            logger = new C.caligula.utils.logging.StepLogger(this.logger_);
+            logger = C.caligula.logging.getStepLogger(this.logger_);
             
         // Remove the internal flag first
         delete params.internal;
@@ -214,6 +214,17 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         });
     };
     
+    /**
+     * Publish a new version of package onto the specified group
+     *
+     * @method publish
+     * @param {Action} action the publishing action to be handled
+     */
+    GroupHandler.prototype.publish = function (action) {
+        var params = action.data,
+            self = this
+            logger = C.caligula.logging.getStepLogger(this.logger_);
+    };
     
     /**********************************************************************
      *                                                                    *
@@ -234,7 +245,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     GroupHandler.prototype.lock_ = function(action, callback) {
         var params = action.data,
             self = this,
-            logger = new C.caligula.utils.logging.StepLogger(this.logger_);
+            logger = C.caligula.logging.getStepLogger(this.logger_);
         
         logger.start('Calling lock.acquire on "publishing.group.' + 
                      params.name + '"');
@@ -272,7 +283,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     GroupHandler.prototype.unlock_ = function(action, id, callback) {
         var params = action.data,
             self = this,
-            logger = new C.caligula.utils.logging.StepLogger(this.logger_);
+            logger = C.caligula.logging.getStepLogger(this.logger_);
         
         logger.start('Calling lock.release on "publishing.group.' + 
                      params.name + '"');
@@ -316,12 +327,12 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         
         var self = this,
             params = action.data,
-            message = null,
+            logger = C.caligula.logging.getStepLogger(this.logger_),
             lock = null;
         
         C.async.waterfall([
             function (next) { // lock the operation collection
-                message = 'Acquiring the operation lock';
+                logger.start('Acquiring the operation lock';
                 self.logger_.debug(message + ' ...');
                 self.lock_(action, next);
             },
@@ -399,57 +410,6 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         });
     };
     
-    
-    /**
-     * Create a deployment(orchestration) job to trigger the configuration
-     * update on the specified nodes(servers).
-     * 
-     * @method deploy_
-     * @param {Action} action the action causes this deployment
-     * @param {Array} targets the target nodes whose configuration are to be
-     *                        deployed
-     * @param {Object} log the log of the operation which causes this
-     *                     deployment
-     * @param {Function} callback the callback function to be invoked when the
-     *                            deployment job has been successfully created, 
-     *                            or some error occurs. The signature
-     *                            of the callback is 'function (error, job)'
-     */
-    GroupHandler.prototype.deploy_ = function (action, targets, log, callback) {
-        var self = this,
-            message = null,
-            params = action.data;
-        
-        // TODO: -1. create TAG = Moved to the caller, since this method can not
-        //                        determine if the nginx and backends are 
-        //                        affected
-        //       2. create orchestration job
-        //       3. update the operation log
-        
-        action.data = {
-            nodes: targets,
-            command: '',
-            parameters: [],
-            timeout: 120, // 2 min
-            extras: { group: params.name, operation: log.id }
-        };
-        message = 'Creating orchestration job with params: ' +
-                  C.lang.reflect.inspect(action.data);
-        this.logger_.debug(message + ' ...');
-        action.acquire('orchestration.create', function (error, result) {
-            if (error) {
-                self.logger_.error(message + ' failed. Error: ' +
-                                   C.lang.reflect.inspect(error));
-                callback(error, null);
-                return;
-            }
-            
-            self.logger_.debug(message + ' succeed. Result: ' +
-                               C.lang.reflect.inspect(result));
-            callback(null, result.id);
-        });
-    };
-    
     C.namespace('caligula.handlers').GroupHandler = GroupHandler;
 
-}, '0.0.1', { requires: ['caligula.handlers.base', 'caligula.utils.logging'] });
+}, '0.0.1', { requires: ['caligula.handlers.base', 'caligula.logging'] });
