@@ -7,7 +7,7 @@
  * @module caligula.components.publishing.group
  */
 Condotti.add('caligula.components.publishing.group', function (C) {
-
+    
     /**
      * This GroupHandler class is a child class of Handler, and designed to
      * handle the group related actions, such as create, update, and publish
@@ -32,56 +32,6 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     }
     
     C.lang.inherit(GroupHandler, C.caligula.handlers.Handler);
-    
-    /**
-     * Return the current status of the user specified group
-     * 
-     * @method status
-     * @param {Action} action the action to query current status of the group
-     */
-    GroupHandler.prototype.status = function (action) {
-        // TODO: 
-        //      1. Read group object
-        //      2. Read latest operation log
-        //      3. Read orchestration job
-        //      4. Construct the status object
-        
-        var self = this,
-            params = action.data,
-            log = null,
-            status = null,
-            logger = new C.caligula.utils.logging.StepLogger(this.logger_);
-        
-        C.async.waterfall([
-            function (next) { // Read the group object
-                logger.start('Reading the group details for ' + params.name);
-                action.data = { criteria: { name: params.name } };
-                action.acquire('data.publishing.group.read', next);
-            },
-            function (result, next) { // Read the most recent operation log
-                logger.done(result);
-                
-                logger.start('Reading the most recent operation log for group ' +
-                             params.name);
-                action.data = { 
-                    criteria: { group: params.name },
-                    operations: {
-                        sort: { timestamp: -1 },
-                        limit: 1
-                    }
-                };
-                action.acquire('data.publishing.group.operation.read', next);
-            },
-            function (result, next) {
-                logger.done(result);
-                if (0 === result.affected) {
-                    //
-                }
-            }
-        ], function(error, result) {
-            //
-        });
-    };
     
     /**
      * Publish a new version of package of the master site. Note that the 
@@ -212,6 +162,21 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      **********************************************************************/
     
     /**
+     * Build the status object
+     *
+     * @method buildStatusObject_
+     * @param {Number} progress the progress enum
+     * @param {Object} group the group object
+     * @param {Object} log the operation log object
+     * @param {Object} deployment the deployment status object if exist
+     * @return {Object} the built status object
+     */
+    GroupHandler.prototype.buildStatusObject_ = function (progress, group, log,
+                                                          deployment) {
+        //
+    };
+    
+    /**
      * Lock the entire operation log collection
      *
      * @method lock_
@@ -229,7 +194,11 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         message = 'Calling lock.acquire on \'publishing.group.operation\'';
         this.logger_.debug(message + ' ...');
 
-        action.data = { name: 'publishing.group.operation', lease: 5000 }; // max lifespan for a lock
+        action.data = { 
+            name: 'publishing.group.operation', 
+            lease: 5000 // max lifespan for a lock
+        }; 
+        
         action.acquire('lock.acquire', function (error, result) {
             action.data = params;
             
