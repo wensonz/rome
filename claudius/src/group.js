@@ -145,6 +145,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.start('Building the status object for group ' + 
                              params.name);
                 if (!group) {
+
                     if (!log) { // not found
                         next(new C.caligula.errors.GroupNotFoundError(
                             'Required group ' + params.name + ' does not exist'
@@ -152,6 +153,16 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                         return;
                     }
                     
+                    if (log.operator === 'create') { // group creation failed
+                        status = {
+                            state: State.FAILED,
+                            operator: log.operator,
+                            params: log.params
+                        };
+                        next(null, status);
+                        return;
+                    }
+
                     if (log.operator !== 'delete') { // no group, but not 
                                                      // deleted either
                         next(new C.caligula.errors.InternalServerError(
@@ -162,28 +173,21 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                         return;
                     }
                     
+                    // the most recent operation is 'delete'
                     group = log.group;
-                    
-                } else if (!log) { // group exist but no operation log
-                    status = { 
-                        state: State.DONE, 
-                        operator: 'create'
-                    };
-                    
-                    next(null, status);
                 }
                 
                 // log MUST exist
                 status.operator = log.operator;
                 status.params = log.params;
-                
+                status.group = group; // current group object, or the snapshot
+                                      // one in a 'delete' operation
+
                 if (!jobs) { // orchestration job not created
                     status.state = locked ? State.RUNNING : State.FAILED;
                     next(null, status);
                     return;
                 }
-                
-                
                 
                 // search for the minimum job state
                 status.state = result.reduce(function (min, current) { 
@@ -191,7 +195,12 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 }, 2);
                 
                 status.state = (status.state + 1) % 3; // translate to State
-                
+                if ((status.state === State.DONE) && 
+                    (status.operator === 'delete')) {
+                    next(new C.caligula.errors.GroupNotFoundError(
+                    ));
+                }
+
                 //
                 status.details = {};
                 jobs.forEach(function (job, index) {
@@ -265,6 +274,9 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             function (status, next) { // Create an operation log
                 logger.done(status);
                 
+                logger.start('Checking if the group ' + params.name + 
+                             ' is available for new publishing');
+
                 if (status.state === State.RUNNING) {
                     next(new C.caligula.errors.OperationConflictError(
                         'Another "' + status.operator + '" operation is now ' +
@@ -273,11 +285,25 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     return;
                 }
                 
+                // Group was tried to be deleted, but failed. If the deleting
+                // operation succeeds, "status" API will return a 
+                // GroupNotFoundError, which will cause the flow ended
                 if (status.operator === 'delete') {
                     next(new C.caligula.errors.GroupGoneError(
-                        //
+                        'Required group ' + params.name + 
+                        ' has been or is gonna be deleted'
                     ));
+                    return;
                 }
+
+                logger.done();
+
+                
+            },
+            function (result, next) {
+                logger.done(result);
+
+                //
             }
         ], function (error, result) {
             //
