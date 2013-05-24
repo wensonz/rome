@@ -60,15 +60,15 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 action.data = { name: 'publishing.group.' + params.name };
                 action.acquire('lock.acquired', next);
             },
-            function (result, next) { // Read the group data
+            function (result, unused, next) { // Read the group data
                 logger.done(result);
                 locked = result.acquired;
                 
                 logger.start('Reading the details of the group ' + params.name);
-                action.data = { name: params.name };
+                action.data = { criteria: { name: params.name }};
                 action.acquire('data.publishing.group.read', next);
             },
-            function (result, next) { // Read the most recent operation log
+            function (result, unused, next) { // Read the most recent operation log
                 logger.done(result);
                 
                 if (result.affected > 0) {
@@ -87,7 +87,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 };
                 action.acquire('data.publishing.group.operation.read', next);
             },
-            function (result, next) { // Read the orchestration job data
+            function (result, unused, next) { // Read the orchestration job data
                 logger.done(result);
                 
                 if (0 === result.affected) {
@@ -100,13 +100,15 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.start('Reading the orchestration job for operation ' +
                              log.id + ' of group ' + params.name);
                 //
-                action.data = { 'extras': {
-                    group: params.name,
-                    operation: log.id
+                action.data = { criteria: { 
+                    'extras': {
+                        group: params.name,
+                        operation: log.id
+                    }
                 }};
                 action.acquire('orchestration.read', next);
             },
-            function (result, next) {
+            function (result, unused, next) {
                 
                 if (C.lang.reflect.isFunction(result)) {
                     next = result;
@@ -207,7 +209,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     var detail = {},
                         nodes = null;
                     
-                    status.details[job.extras.category] = detail;
+                    status.details[job.extras.affected] = detail;
                     
                     result[index].nodes.forEach(function (node) {
                         detail[node.node] = { state: node.stat };
@@ -246,7 +248,10 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         var params = action.data,
             self = this,
             logger = C.caligula.logging.getStepLogger(this.logger_),
-            owner = null;
+            owner = null,
+            group = null,
+            tag = null,
+            log = null; // the publishing operation log
             
         // STEPS:
         //  1. lock the group operation
@@ -271,7 +276,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 action.data.internal = true;
                 action.acquire(action.name.replace(/publish$/, 'status'), next);
             },
-            function (status, next) { // Create an operation log
+            function (status, unused, next) { // Create an operation log
+
                 logger.done(status);
                 
                 logger.start('Checking if the group ' + params.name + 
@@ -297,12 +303,169 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 }
 
                 logger.done();
+                group = status.group;
 
-                
+                logger.start('Creating publishing operation log for group ' + 
+                             params.name);
+                log = { 
+                    id: C.uuid.v4(),
+                    group: group,
+                    operator: 'publish',
+                    params: params,
+                    timestamp: Date.now()
+                };
+
+                action.data = log;
+                action.acquire('data.publishing.group.operation.create', next);
             },
-            function (result, next) {
+            function (result, unused, next) { // Update the group data
                 logger.done(result);
 
+                action.data = {
+                    criteria: { name: params.name },
+                    update: { '$set': {
+                        package: params.package
+                    }}
+                };
+                logger.start('Updating the package for group ' + params.name +
+                             ' to ' + params.package.name + '@' + 
+                             params.package.version);
+
+                action.acquire('data.publishing.group.update', next);
+            },
+            function (result, unused, next) { // Create configuration TAG
+                logger.done(result);
+
+                tag = 'TAG_PUBLISHING_GROUP_' + params.name.toUpperCase() + 
+                      '@' + Date.now().toString();
+
+                logger.start('Tagging the new configuration for group ' +
+                             params.name + ' with tag ' + tag);
+
+                action.data = { name: tag };
+                action.acquire('configuration.tag.create', next);
+            },
+            function (result, unused, next) { // Creat orchestration job
+                logger.done(result);
+
+                logger.start('Creating orchestration job for publishing ' +
+                             params.package.name + '@' + 
+                             params.package.version + ' onto ' + 
+                             group.backends.toString() + ' of group ' +
+                             params.name);
+                action.data = {
+                    nodes: group.backends,
+                    command: '',
+                    parameters: [tag],
+                    timeout: 120, // 2 min
+                    extras: { 
+                        group: group.name, 
+                        operation: log.id, 
+                        affected: 'backends'
+                    }
+                };
+                action.acquire('orchestration.create', next);
+            }
+        ], function (error, result) {
+
+            var cleanup = function () {
+                if (error) {
+                    logger.error(error);
+                    action.error(error);
+                    return;
+                }
+
+                logger.done(result);
+                action.done();
+            };
+            
+            if (owner) {
+                self.logger_.debug('Release the pre-acquired operation lock ' +
+                                   'for group ' + params.name + ' ...');
+                self.unlock_(action, owner, cleanup);
+                return;
+            }
+            
+            cleanup();
+        });
+    };
+
+
+    /**
+     * Create a new group with the specified params.
+     *
+     * @method create
+     * @param {Action} action the group creation action to be handled
+     */
+    GroupHandler.prototype.create = function (action) {
+        var self = this,
+            params = action.data,
+            allocated = {},
+            locks = {},
+            logger = C.logging.getStepLogger(this.logger_);
+
+        C.async.waterfall([
+            function (next) { // Lock the group
+                logger.start('Acquiring the lock on on group ' + params.name);
+                self.lock_(action, 'publishing.group.' + params.name, next);
+            },
+            function (result, next) { // Lock the backend
+                logger.done(result);
+                locks.group = result.owner;
+
+                logger.start('Acquiring the lock on the backend servers');
+                self.lock_(action, 'publishing.backend', next);
+            },
+            function (result, next) { // Check if group already exist
+                logger.done(result);
+                locks.backend = result.owner;
+
+                logger.start('Seaching the existing groups for name ' + 
+                             params.name);
+                
+                action.data = { criteria: { name: params.name }};
+                action.acquire('data.publishing.group.read', next);
+            },
+            function (result, unused, next) { // Read all groups belong to the
+                                              // specified ISP
+                logger.done(result);
+
+                logger.start('Ensuring the group ' + params.name + 
+                             ' does not exist');
+                if (result.affected > 0) {
+                    next(new C.caligula.errors.GroupAlreadyExistError(
+                        'Group ' + params.name + ' already exists.'
+                    ));
+                    return;
+                }
+
+                logger.done();
+                
+                logger.start('Reading all groups belong to ISP ' + params.isp);
+                action.data = { 
+                    criteria: { isp: params.isp }, 
+                    fields: { backends: 1 }
+                };
+                action.acquire('data.publishing.group.read', next);
+            },
+            function (result, unused, next) { // Read all backend servers belong
+                                              // to the specified ISP
+                logger.done(result);
+
+                logger.start('Reading all backend servers belong to ISP ' +
+                             params.isp);
+                action.data = { criteria: { 
+                    includes: [
+                        'property.weibo.master-site.variants',
+                        'isp.' + params.isp
+                    ],
+                    type: 'node'
+                }, fields: { name: 1 } };
+
+                action.acquire('configuration.read', next);
+            },
+            function (result, unused, next) { //
+                logger.done(result);
                 //
             }
         ], function (error, result) {
@@ -326,16 +489,15 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      *                            some error occurs. The signature of the
      *                            callback is 'function (error, id) {}'
      */
-    GroupHandler.prototype.lock_ = function(action, callback) {
+    GroupHandler.prototype.lock_ = function(action, name, callback) {
         var params = action.data,
             self = this,
             logger = C.caligula.logging.getStepLogger(this.logger_);
         
-        logger.start('Calling lock.acquire on "publishing.group.' + 
-                     params.name + '"');
+        logger.start('Calling lock.acquire on "' + name + '"');
         
         action.data = { 
-            name: 'publishing.group.' + params.name, 
+            name: name,
             lease: 5000 // max lifespan for a lock
         }; 
         
@@ -364,15 +526,14 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      *                            some error occurs. The signature of the
      *                            callback is 'function (error) {}'
      */
-    GroupHandler.prototype.unlock_ = function(action, id, callback) {
+    GroupHandler.prototype.unlock_ = function(action, name, id, callback) {
         var params = action.data,
             self = this,
             logger = C.caligula.logging.getStepLogger(this.logger_);
         
-        logger.start('Calling lock.release on "publishing.group.' + 
-                     params.name + '"');
+        logger.start('Calling lock.release on "' + name + '"');
         
-        action.data = { name: 'publishing.group.' + params.name, owner: id };
+        action.data = { name: name, owner: id };
         action.acquire('lock.release', function (error) {
             action.data = params;
             
@@ -405,93 +566,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      */
     GroupHandler.prototype.createOperationLog_ = function (action, group,
                                                            operation, callback) {
-        // TODO: 1. lock the operation
-        //       2. call status to find the current status of the group
-        //       3. add the operation log if no other operation is in processing
-        
-        var self = this,
-            params = action.data,
-            logger = C.caligula.logging.getStepLogger(this.logger_),
-            lock = null;
-        
-        C.async.waterfall([
-            function (next) { // lock the operation collection
-                logger.start('Acquiring the operation lock';
-                self.logger_.debug(message + ' ...');
-                self.lock_(action, next);
-            },
-            function (id, next) { // call status
-                var index = null;
-                
-                self.logger_.debug(message + ' succeed.');
-                lock = id;
-                
-                message = 'Querying group status to find if there is an ' +
-                          'operation on going';
-                self.logger_.debug(message + ' ...');
-                action.data = params;
-                index = action.name.lastIndexOf('.');
-                // TODO: check if index < 0
-                //       would it be better using split and join?
-                action.acquire(action.name.substring(0, index + 1) + 'status', 
-                               next);
-            },
-            function (result, next) {
-                self.logger_.debug(message + ' succeed. Status: ' +
-                                   C.lang.reflect.inspect(result));
-                
-                message = 'Ensuring that there is no other operation on going' +
-                          ' on the specified group "' + params.name + '"';
-                self.logger_.debug(message + ' ...');
-                if (result.state === C.caligula.constants.State.CHANGING) {
-                    next(new C.caligula.errors.OperationConflictError(
-                        'There is already a "' + result.operation + 
-                        '" operation on the required group "' + params.name + 
-                        '"'
-                    ));
-                    return;
-                }
-                
-                self.logger_.debug(message + ' succeed.');
-                
-                message = 'Creating the operation log for this "' + operation +
-                          '" operation on the specified group "' + params.name +
-                          '"';
-                self.logger_.debug(message + ' ...');
-                action.data = {
-                    id: C.uuid.v4(),
-                    group: group, // the current group object backup
-                    operation: operation,
-                    params: params,
-                    revisions: {},
-                    timestamp: Date.now()
-                };
-                
-                action.acquire('data.publishing.group.operation.create', next);
-            }
-        ], function (error, result) {
-            
-            var cleanup = function () {
-                if (error) {
-                    self.logger_.error(message + ' failed. Error: ' +
-                                       C.lang.reflect.inspect(error));
-                    callback(error, null);
-                    return;
-                }
-                
-                self.logger_.debug(message + ' succeed.');
-                callback(null, action.data); // Return the log object itself
-            };
-            
-            if (lock) {
-                self.logger_.debug('Release the pre-acquired operation lock ' + 
-                                   lock + ' ...');
-                self.unlock_(action, lock, cleanup);
-                return;
-            }
-            
-            cleanup();
-        });
+        //
     };
     
     C.namespace('caligula.handlers').GroupHandler = GroupHandler;

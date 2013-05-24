@@ -39,7 +39,7 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 self.logger_.debug(message + ' ...');
                 
                 if (params.revision) {
-                    next(params.revision);
+                    next(null, params.revision, {});
                     return;
                 }
                 
@@ -49,7 +49,8 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
             function (revision, meta, next) {
                 self.logger_.debug(message + ' succeed. Revision: ' + revision);
                 
-                message = 'Creating tag ' + params.name + ' with revision ' + revision;
+                message = 'Creating tag ' + params.name + ' with revision ' + 
+                          revision;
                 self.logger_.debug(message + ' ...');
                 action.data = params;
                 action.data.revision = revision;
