@@ -68,7 +68,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 action.data = { criteria: { name: params.name }};
                 action.acquire('data.publishing.group.read', next);
             },
-            function (result, unused, next) { // Read the most recent operation log
+            function (result, unused, next) { // Read the most recent operation
+                                              // log
                 logger.done(result);
                 
                 if (result.affected > 0) {
@@ -401,7 +402,9 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         var self = this,
             params = action.data,
             allocated = {},
+            nodes = null,
             locks = {},
+            group = null,
             logger = C.logging.getStepLogger(this.logger_);
 
         C.async.waterfall([
@@ -451,9 +454,16 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             function (result, unused, next) { // Read all backend servers belong
                                               // to the specified ISP
                 logger.done(result);
+                result.data = result.data || [];
+                result.data.forEach(function (item) {
+                    item.backends.forEach(function (backend) {
+                        allocated[backend] = true;
+                    });
+                });
 
                 logger.start('Reading all backend servers belong to ISP ' +
                              params.isp);
+                
                 action.data = { criteria: { 
                     includes: [
                         'property.weibo.master-site.variants',
@@ -464,8 +474,169 @@ Condotti.add('caligula.components.publishing.group', function (C) {
 
                 action.acquire('configuration.read', next);
             },
-            function (result, unused, next) { //
+            function (result, unused, next) { // Read deleting oeprations 
                 logger.done(result);
+                nodes = result.data || [];
+                
+                logger.start('Reading deleting operations currently on going');
+                action.data = {
+                    fields: { group: 1, timestamp: 1 },
+                    operations: { sort: { timestamp: 1} },
+                    by: 'group.name',
+                    aggregation: { group: { '$first': 'group' }}
+                };
+                
+                action.acquire('data.publishing.group.operation.group', next);
+            },
+            function (result, unused, next) { // Read status of result groups
+        	    var groups = null;
+        	    
+            	logger.done(result);
+                
+            	result.data = result.data || [];
+            	groups = reuslt.data.filter(function (item) { 
+            	    return item.operator === 'delete'; 
+            	}).map(function (item) {
+            	    return item.group;
+            	});
+        	    
+            	self.logger_.debug('Groups being or has been deleted are: ' +
+                                   C.lang.reflect.inspect(groups));
+                
+                if (0 === groups.length) {
+                    next();
+                    return;
+                }
+                
+                logger.start('Reading the status of the groups that are ' +
+                             'suspected to be deleted: ' + 
+                             C.lang.reflect.inspect(groups));
+                C.async.mapSeries(groups, function (group, next) {
+                    action.data = { name: group.name };
+                    action.acquire(action.name.replace(/create$/, 'status'), 
+                                   next);
+                }, next);
+            },
+            function (result, next) { // Create operation log
+                var available = null,
+                    required = 0;
+                
+                if (C.lang.reflect.isFunction(result)) {
+                    next = result;
+                    result = [];
+                } else {
+                    logger.done(result);
+                }
+                
+                result.forEach(function (item) {
+                    if (item.state !== State.OK) {
+                        return;
+                    }
+                    
+                    item.group.backends.forEach(function (backend) {
+                        allocated[backend] = true;
+                    }); 
+                });
+                
+                available = nodes.filter(function (node) {
+                    return !(node.name in allocated);
+                }).map(function (node) {
+                    return node.name;
+                });
+                
+                logger.start('Verifying the available resources for ' + 
+                             params.scale + '% for group ' + params.name);
+                // Note that now only 10% of the overall traffic is allowd to 
+                // be redirected to the branched testing groups, so the 
+                // calculation is based on 10 and nodes participated in the
+                // testing.
+                required = nodes.length * params.scale / 10;
+                if (available.length < required) {
+                    next(new C.caligula.errors.ResourceNotEnoughError(
+                        'Required scale ' + params.scale + '% for group ' +
+                        params.name + ' needs at least ' + required + 
+                        ', but only ' + available.length + ' are available'
+                    ));
+                    return;
+                }
+                
+                params.backends = available.slice(0, required);
+                logger.done(params.backends);
+                
+                action.data = {
+                    id: C.uuid.v4(),
+                    operator: 'create',
+                    params: params,
+                    timestamp: Date.now(),
+                    group: params
+                };
+                logger.start('Creating the operation log for creating group ' +
+                             params.name + ' with params: ' +
+                             C.lang.reflect.inspect(action.data));
+                action.acquire('data.publishing.group.operation.create', next);
+            },
+            function (result, unused, next) {
+                logger.done(result);
+                
+                logger.start('Creating the data object for group ' + 
+                             params.name);
+                action.data = params;
+                action.acquire('data.publishing.group.create', next);
+            }
+        ], function (error, result) {
+            
+            C.async.forEachSeries(Object.keys(locks), function (name, next) {
+                self.logger_.debug('The pre-acquired ' + name + ' lock ' +
+                                   'for group ' + params.name + 
+                                   ' are to be released');
+                self.unlock_(action, locks[name], next);
+            }, function () {
+                if (error) {
+                    logger.error(error);
+                    action.error(error);
+                    return;
+                }
+
+                logger.done(result);
+                action.done();
+            });
+        });
+    };
+    
+    /**
+     * Scale the size of the backend servers of the specified group
+     *
+     * @method scale
+     * @param {Action} action the scaling action to be handled
+     */
+    GroupHandler.prototype.scale = function (action) {
+        var params = action.data,
+            self = this,
+            locks = {},
+            logger = C.logging.getStepLogger(this.logger_);
+        
+        C.async.waterfall([
+            function (next) { // Lock the group
+                logger.start('Acquiring the lock on on group ' + params.name);
+                self.lock_(action, 'publishing.group.' + params.name, next);
+            },
+            function (result, next) { // Lock the backend
+                logger.done(result);
+                locks.group = result.owner;
+
+                logger.start('Acquiring the lock on the backend servers');
+                self.lock_(action, 'publishing.backend', next);
+            },
+            function (result, next) { // Read current status of the group
+                logger.done(result);
+                locks.backend = result.owner;
+                
+                logger.start('Querying the current status of the group ' +
+                             params.name);
+                action.data = { name: params.name };
+                action.acquire(action.name.replace(/scale$/, 'status'), next);
+            },
+            function (status, next) { // Calculate the scale
                 //
             }
         ], function (error, result) {
@@ -473,6 +644,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         });
     };
     
+    
+
     /**********************************************************************
      *                                                                    *
      *                        PRIVATE MEMBERS                             *
@@ -539,34 +712,14 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             
             if (error) {
                 logger.error(error);
-                callback(error, null);
+                // callback(error, null);
+                callback(); // It's safe not to report errors in unlock
                 return;
             }
             
             logger.done();
             callback();
         });
-    };
-    
-    /**
-     * Create an operation log based on the incoming request. Please refer to
-     * TODO: shorten it
-     * http://wiki.intra.sina.com.cn/display/dpool/Claudius+-+Group-based+Publishing+APIs+for+Weibo+front-end+Version2#Claudius-Group-basedPublishingAPIsforWeibofront-endVersion2-DataStructures
-     * for the data structure of the operation log.
-     * 
-     * @method createOperationLog_
-     * @param {Action} action the incoming action which causes this operation
-     *                        log to be created
-     * @param {Object} group the group object to be operated on
-     * @param {String} operation the operation to be executed, such as publish.
-     * @param {Function} callback the callback function to be invoked when the
-     *                            required operation log has been successfully
-     *                            created, or some error occurs. The signature
-     *                            of the callback is 'function (error, log)'
-     */
-    GroupHandler.prototype.createOperationLog_ = function (action, group,
-                                                           operation, callback) {
-        //
     };
     
     C.namespace('caligula.handlers').GroupHandler = GroupHandler;
