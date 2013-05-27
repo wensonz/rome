@@ -603,7 +603,46 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         });
     };
     
-    
+    /**
+     * Scale the size of the backend servers of the specified group
+     *
+     * @method scale
+     * @param {Action} action the scaling action to be handled
+     */
+    GroupHandler.prototype.scale = function (action) {
+        var params = action.data,
+            self = this,
+            locks = {},
+            logger = C.logging.getStepLogger(this.logger_);
+        
+        C.async.waterfall([
+            function (next) { // Lock the group
+                logger.start('Acquiring the lock on on group ' + params.name);
+                self.lock_(action, 'publishing.group.' + params.name, next);
+            },
+            function (result, next) { // Lock the backend
+                logger.done(result);
+                locks.group = result.owner;
+
+                logger.start('Acquiring the lock on the backend servers');
+                self.lock_(action, 'publishing.backend', next);
+            },
+            function (result, next) { // Read current status of the group
+                logger.done(result);
+                locks.backend = result.owner;
+                
+                logger.start('Querying the current status of the group ' +
+                             params.name);
+                action.data = { name: params.name };
+                action.acquire(action.name.replace(/scale$/, 'status'), next);
+            },
+            function (status, next) { // Calculate the scale
+                //
+            }
+        ], function (error, result) {
+            //
+        });
+    };
     
     
 
