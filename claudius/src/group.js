@@ -603,46 +603,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         });
     };
     
-    /**
-     * Scale the size of the backend servers of the specified group
-     *
-     * @method scale
-     * @param {Action} action the scaling action to be handled
-     */
-    GroupHandler.prototype.scale = function (action) {
-        var params = action.data,
-            self = this,
-            locks = {},
-            logger = C.logging.getStepLogger(this.logger_);
-        
-        C.async.waterfall([
-            function (next) { // Lock the group
-                logger.start('Acquiring the lock on on group ' + params.name);
-                self.lock_(action, 'publishing.group.' + params.name, next);
-            },
-            function (result, next) { // Lock the backend
-                logger.done(result);
-                locks.group = result.owner;
-
-                logger.start('Acquiring the lock on the backend servers');
-                self.lock_(action, 'publishing.backend', next);
-            },
-            function (result, next) { // Read current status of the group
-                logger.done(result);
-                locks.backend = result.owner;
-                
-                logger.start('Querying the current status of the group ' +
-                             params.name);
-                action.data = { name: params.name };
-                action.acquire(action.name.replace(/scale$/, 'status'), next);
-            },
-            function (status, next) { // Calculate the scale
-                //
-            }
-        ], function (error, result) {
-            //
-        });
-    };
+    
     
     
 
@@ -723,5 +684,92 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     };
     
     C.namespace('caligula.handlers').GroupHandler = GroupHandler;
+
+
+
+    /**
+     * This type of error is to be thrown when the required group can not be
+     * found.
+     *
+     * @class GroupNotFoundError
+     * @constructor
+     * @extends NotFoundError
+     * @param {String} message the error message describe this error
+     */
+    function GroupNotFoundError (message) {
+        /* inheritance */
+        this.super(2, message);
+    }
+    C.lang.inherit(GroupNotFoundError, C.caligula.errors.NotFoundError);
+
+    C.namespace('caligula.errors').GroupNotFoundError = GroupNotFoundError;
+
+    /**
+     * This type of error is designed to be thrown when one operation is to be
+     * applied on the specified group, but another one is operating the group
+     * at the same time.
+     *
+     * @class OperationConflictError
+     * @constructor
+     * @extends ConflictError
+     * @param {String} message  the error message
+     */
+    function OperationConflictError (message) {
+        /* inheritance */
+        this.super(1, message);
+    }
+    C.lang.inherit(OperationConflictError, C.caligula.errors.ConflictError);
+
+    C.namespace('caligula.errors').OperationConflictError = OperationConflictError;
+
+    /**
+     * This type of error is designed to be thrown when the group was failed 
+     * to be deleted. In this scenario, no operations are allowd to be applied
+     * onto this group, except 'delete' until the group is successfully deleted.
+     *
+     * @class GroupGoneError
+     * @constructor
+     * @extends GoneError
+     * @param {String} message the error message
+     */
+    function GroupGoneError (message) {
+        /* inheritance */
+        this.super(1, message);
+    }
+    C.lang.inherit(GroupGoneError, C.caligula.errors.GoneError);
+
+    C.namespace('caligula.errors').GroupGoneError = GroupGoneError;
+
+    /**
+     * This type of error is designed to be thrown when the group to be created
+     * already exist.
+     *
+     * @class GroupAlreadyExistError
+     * @constructor
+     * @extends ConflictError
+     * @param {String} message the error message
+     */
+    function GroupAlreadyExistError (message) {
+        /* inheritance */
+        this.super(2, message);
+    }
+    C.lang.inherit(GroupAlreadyExistError, C.caligula.errors.ConflictError);
+    C.namespace('caligula.errors').GroupAlreadyExistError = GroupAlreadyExistError;
+
+    /**
+     * This type of error is designed to be thrown when the required resources
+     * for the new group or scaled group are not enough.
+     *
+     * @class ResourceNotEnoughError
+     * @constructor
+     * @extends RequestedRangeNotSatisfiableError
+     * @param {String} message the error message
+     */
+    function ResourceNotEnoughError (message) {
+        /* inheritance */
+        this.super(1, message);
+    }
+    C.lang.inherit(ResourceNotEnoughError, C.caligula.errors.RequestedRangeNotSatisfiableError);
+    C.namespace('caligula.errors').ResourceNotEnoughError = ResourceNotEnoughError;
 
 }, '0.0.1', { requires: ['caligula.handlers.base', 'caligula.logging'] });

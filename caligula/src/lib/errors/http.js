@@ -72,10 +72,16 @@ Condotti.add('caligula.errors.http', function (C) {
      * @class BadRequestError
      * @constructor
      * @extends HttpError
+     * @param {Number} code the detailed error code
+     * @param {String} message the error message
      */
-    function BadRequestError (message) {
+    function BadRequestError (code, message) {
+        if (String === C.lang.reflect.getObjectType(code)) {
+            message = code;
+            code = 0;
+        }
         /* inheritance */
-        this.super(400, 400, message);
+        this.super(400, 40000 + code, message);
     }
     
     C.lang.inherit(BadRequestError, HttpError);
@@ -93,7 +99,7 @@ Condotti.add('caligula.errors.http', function (C) {
      */
     function InvalidArgumentError (message) {
         /* inheritance */
-        this.super(message);
+        this.super(1, message);
     }
     
     C.lang.inherit(InvalidArgumentError, BadRequestError);
@@ -107,11 +113,16 @@ Condotti.add('caligula.errors.http', function (C) {
      * @class InternalServerError
      * @constructor
      * @extends HttpError
+     * @param {Number} code the detailed error code
      * @param {String} message the message describes this error
      */
-    function InternalServerError(message) {
+    function InternalServerError(code, message) {
+        if (String === C.lang.reflect.getObjectType(code)) {
+            message = code;
+            code = 0;
+        }
         /* inheritance */
-        this.super(500, 500, message);
+        this.super(500, 50000 + code, message);
     }
     
     C.lang.inherit(InternalServerError, HttpError);
@@ -124,11 +135,16 @@ Condotti.add('caligula.errors.http', function (C) {
      * @class NotFoundError
      * @constructor
      * @extends HttpError
+     * @param {Number} code the detailed error code
      * @param {String} message the message describes this error
      */
-    function NotFoundError (message) {
+    function NotFoundError (code, message) {
+        if (String === C.lang.reflect.getObjectType(code)) {
+            message = code;
+            code = 0;
+        }
         /* inheritance */
-        this.super(404, 404, message);
+        this.super(404, 40400 + code, message);
     }
     
     C.lang.inherit(NotFoundError, HttpError);
@@ -146,7 +162,7 @@ Condotti.add('caligula.errors.http', function (C) {
      */
     function ActionHandlerNotFoundError (message) {
         /* inheritance */
-        this.super(message);
+        this.super(1, message);
     }
     
     C.lang.inherit(ActionHandlerNotFoundError, NotFoundError);
@@ -160,11 +176,16 @@ Condotti.add('caligula.errors.http', function (C) {
      * @class NotAcceptableError
      * @constructor
      * @extends HttpError
+     * @param {Number} code the detailed error code
      * @param {String} message the message describes this error
      */
-    function NotAcceptableError (message) {
+    function NotAcceptableError (code, message) {
+        if (String === C.lang.reflect.getObjectType(code)) {
+            message = code;
+            code = 0;
+        }
         /* inheritance */
-        this.super(406, 406, message);
+        this.super(406, 40600 + code, message);
     }
     
     C.lang.inherit(NotAcceptableError, HttpError);
@@ -183,7 +204,7 @@ Condotti.add('caligula.errors.http', function (C) {
      */
     function ActionHandlerNotCallableError (message) {
         /* inheritance */
-        this.super(message);
+        this.super(1, message);
     }
     
     C.lang.inherit(ActionHandlerNotCallableError, NotAcceptableError);
@@ -197,11 +218,16 @@ Condotti.add('caligula.errors.http', function (C) {
      * @class ConflictError
      * @constructor
      * @extends HttpError
+     * @param {Number} code the detailed error code
      * @param {String} message the message describes this error
      */
-    function ConflictError (message) {
+    function ConflictError (code, message) {
+        if (String === C.lang.reflect.getObjectType(code)) {
+            message = code;
+            code = 0;
+        }
         /* inheritance */
-        this.super(409, 409, message);
+        this.super(409, 40900 + code, message);
     }
     
     C.lang.inherit(ConflictError, HttpError);
@@ -214,15 +240,39 @@ Condotti.add('caligula.errors.http', function (C) {
      * @class GoneError
      * @constructor
      * @extends HttpError
+     * @param {Number} code the detailed error code
      * @param {String} message the message describes this error
      */
-    function GoneError (message) {
+    function GoneError (code, message) {
+        if (String === C.lang.reflect.getObjectType(code)) {
+            message = code;
+            code = 0;
+        }
         /* inheritance */
-        this.super(410, 410, message);
+        this.super(410, 41000 + code, message);
     }
     
     C.lang.inherit(GoneError, HttpError);
     
     C.namespace('caligula.errors').GoneError = GoneError;
-    
+
+    /**
+     * Requested Range Not Satisfiable
+     *
+     * @class RequestedRangeNotSatisfiableError
+     * @constructor
+     * @extends HttpError
+     * @param {Number} code the detailed error code
+     * @param {String} message the error message
+     */
+    function RequestedRangeNotSatisfiableError (code, message) {
+        if (String === C.lang.reflect.getObjectType(code)) {
+            message = code;
+            code = 0;
+        }
+        /* inheritance */
+        this.super(416, 41600 + code, message);
+    }
+    C.lang.inherit(RequestedRangeNotSatisfiableError, HttpError);
+    C.namespace('caligula.errors').RequestedRangeNotSatisfiableError = RequestedRangeNotSatisfiableError;
 }, '0.0.1', { requires: [] });
