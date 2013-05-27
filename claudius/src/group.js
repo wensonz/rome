@@ -644,7 +644,135 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         });
     };
     
-    
+    /**
+     * Pause or resume the specified group, which is archieved by blocking or
+     * unblocking the port 80 of the backend servers allocated to the group.
+     * 
+     * @method pause
+     * @param {Action} action the pausing/resuming action to be handled
+     */
+    GroupHandler.prototype.pause = function (action) {
+        var params = action.data,
+            self = this,
+            logger = C.logging.getStepLogger(this.logger_),
+            owner = null,
+            group = null,
+            log = null;
+
+        C.async.waterfall([
+            function (next) { // Lock the operation log 
+                logger.start('Acquiring the operation lock for group ' +
+                             params.name);
+                self.lock_(action, next);
+            },
+            function (result, next) { // Query the current status
+                logger.done(result);
+                owner = result;
+                
+                logger.start('Querying current status of group ' + params.name);
+                action.data.internal = true;
+                action.acquire(action.name.replace(/publish$/, 'status'), next);
+            },
+            function (status, unused, next) { // Create an operation log
+
+                logger.done(status);
+                
+                logger.start('Checking if the group ' + params.name + 
+                             ' is available for ' + 
+                             (params.pause ? 'pausing' : 'resuming'));
+
+                if (status.state === State.RUNNING) {
+                    next(new C.caligula.errors.OperationConflictError(
+                        'Another "' + status.operator + '" operation is now ' +
+                        'running on the specified group ' + params.name
+                    ));
+                    return;
+                }
+                
+                // Group was tried to be deleted, but failed. If the deleting
+                // operation succeeds, "status" API will return a 
+                // GroupNotFoundError, which will cause the flow ended
+                if (status.operator === 'delete') {
+                    next(new C.caligula.errors.GroupGoneError(
+                        'Required group ' + params.name + 
+                        ' has been or is gonna be deleted'
+                    ));
+                    return;
+                }
+
+                logger.done();
+                group = status.group;
+
+                logger.start('Creating ' + 
+                             (params.pause ? 'pausing' : 'resuming') +
+                             ' operation log for group ' + params.name);
+                log = { 
+                    id: C.uuid.v4(),
+                    group: group,
+                    operator: params.pause ? 'pause' : 'resume',
+                    params: params,
+                    timestamp: Date.now()
+                };
+
+                action.data = log;
+                action.acquire('data.publishing.group.operation.create', next);
+            },
+            function (result, unused, next) { // Update the group data
+                logger.done(result);
+
+                action.data = {
+                    criteria: { name: params.name },
+                    update: { '$set': {
+                        package: params.package
+                    }}
+                };
+                logger.start('Updating the group ' + params.name +
+                             ' to be ' + params.pause ? 'paused' : 'resumed');
+
+                action.acquire('data.publishing.group.update', next);
+            },
+            function (result, unused, next) { // Creat orchestration job
+                logger.done(result);
+
+                logger.start('Creating orchestration job for ' +
+                             (params.pause ? 'pausing' : 'resuming') +
+                             'backends ' + group.backends.toString() + 
+                             ' of group ' + params.name);
+                action.data = {
+                    nodes: group.backends,
+                    command: '/usr/local/sinasrv2/sbin/rome-claudius-pause.sh',
+                    parameters: [params.pause],
+                    timeout: 120, // 2 min
+                    extras: { 
+                        group: group.name, 
+                        operation: log.id, 
+                        affected: 'backends'
+                    }
+                };
+                action.acquire('orchestration.create', next);
+            }
+        ], function (error, result) {
+            var cleanup = function () {
+                if (error) {
+                    logger.error(error);
+                    action.error(error);
+                    return;
+                }
+
+                logger.done(result);
+                action.done();
+            };
+            
+            if (owner) {
+                self.logger_.debug('Release the pre-acquired operation lock ' +
+                                   'for group ' + params.name + ' ...');
+                self.unlock_(action, owner, cleanup);
+                return;
+            }
+            
+            cleanup();
+        });
+    };
 
     /**********************************************************************
      *                                                                    *
