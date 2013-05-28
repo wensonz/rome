@@ -62,7 +62,7 @@ Condotti.add('caligula.actions.http', function (C) {
             status = (meta && meta.status)|| 200;
             
         content = {
-            result: data
+            result: data || {}
         };
         body = JSON.stringify(content, null, 4);
         

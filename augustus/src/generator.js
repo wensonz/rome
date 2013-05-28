@@ -65,14 +65,14 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
         this.merger_ = this.config_.merger || 'configuration.merger';
         
         /**
-         * The information about generations currently in process, such as the
-         * names of the node and the tags to generate
+         * The root directory where the configuration files are to be written
+         * under it
          * 
-         * @property generating_
-         * @type Object
-         * @default {}
+         * @property root_
+         * @type String
+         * @deafult '/data1/rome/salt'
          */
-        this.generating_ = {};
+        this.root_ = this.config_.root || '/data1/rome/salt';
     }
 
     C.lang.inherit(GenerationHandler, C.caligula.handlers.Handler);
@@ -136,11 +136,11 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
         */
         var self = this,
             params = action.data,
-            message = null,
             configurations = {},
             dependencies = null,
             names = null,
-            merged = null;
+            merged = null,
+            logger = C.logging.getStepLogger(this.logger_);
         
         // TODO: handle the case when there is already a job to generate the
         //       configuration for this node and with this tag
@@ -148,10 +148,9 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
         // TODO: check the params
         C.async.waterfall([
             function (next) { // reading revision number from TAG
-                message = 'Expand the TAG ' + params.tag + 
-                          ' into the configurations';
-                          
-                self.logger_.debug(message + ' ...');
+                logger.start('Expand the TAG ' + params.tag + 
+                             ' into the configurations');
+                
                 action.data = {
                     criteria: { '$or': [
                         { type: 'role' },
@@ -161,13 +160,11 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                 };
                 action.acquire('configuration.tag.expand', next);
             },
-            function (result, meta, next) { // Reading the node information if the
+            function (result, unused, next) { // Reading the node information if the
                                       // does not exist when the tag is created
                 var node = null;
                 
-                self.logger_.debug(message + ' succeed. Result: ' + 
-                                   C.lang.reflect.inspect(result));
-                
+                logger.done(result);
                 
                 result.data.forEach(function (item) {
                     configurations[item.name] = item;
@@ -177,25 +174,25 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                 });
                 
                 if (node) { // node configuration is found
-                    next();
+                    next(null, null, null);
                     return;
                 }
                 
-                message = 'Node ' + params.node + ' seems not exist when tag ' +
-                          params.tag + ' is created. Reading its most recent ' +
-                          'version';
-                self.logger_.debug(message + ' ...');
+                logger.start('Node ' + params.node + ' seems not exist when' +
+                             ' tag ' + params.tag + ' is created. Reading its' +
+                             ' most recent version');
+                
                 action.data = { criteria: { name: params.node, type: 'node' }};
                 action.acquire('configuration.read', next);
             },
-            function (result, meta, next) { // Filter out the list of roles the
+            function (result, unused, next) { // Filter out the list of roles the
                                       // user specified node depends on directly
                                       // or indirectly, and also the filters
                                       // to be executed
                 
                 if (result) { // node exists
-                    self.logger_.debug(message + ' succeed. Result: ' +
-                                       C.lang.reflect.inspect(result));
+                    logger.done(result);
+                    
                     // TODO: double check if the result.data[0] exist
                     configurations[result.data[0].name] = result.data[0];
                 }
@@ -213,11 +210,10 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                                    params.node + ' are ' +
                                    C.lang.reflect.inspect(names));
                                    
-                message = 'Executing "before" filters on the dependencies of ' +
-                          'node ' + params.node + ': ' + 
-                          C.lang.reflect.inspect(names);
-                          
-                self.logger_.debug(message + ' ...');
+                logger.start('Executing "before" filters on the dependencies' +
+                             ' of node ' + params.node + ': ' + 
+                             C.lang.reflect.inspect(names));
+                
                 // Execute 'before' filters of each configuration object in
                 // parallel
                 action.data = params;
@@ -225,11 +221,11 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
             },
             function (next) { // merge all configurations into one object
                 var merger = null;
+                logger.done();
                 
-                self.logger_.debug(message + ' succeed.');
-                message = 'Merging configurations for node ' + params.node + 
-                          ' from ' + C.lang.reflect.inspect(names);
-                self.logger_.debug(message + ' ...');
+                logger.start('Merging configurations for node ' + params.node + 
+                             ' from ' + C.lang.reflect.inspect(names));
+                             
                 /**
                  * The merged object is expected to contain the following info:
                  * 1. resources
@@ -244,39 +240,47 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                 } catch (e) {
                     next(e);
                 }
-                self.logger_.debug(message + ' succeed. Merged: ' + 
-                                   C.lang.reflect.inspect(merged));
+                logger.done(merged);
                 
-                message = 'Executing "after" filters on the merged ' +
-                          'configuration ' + C.lang.reflect.inspect(merged);
-                self.logger_.debug(message + ' ...');
+                logger.start('Executing "after" filters on the merged ' +
+                             'configuration ' + C.lang.reflect.inspect(merged));
+                             
                 // Execute "after" filters on merged result
                 action.data = params;
                 self.postfilterConfigurations_(action, merged, dependencies, 
                                                next);
             },
             function (next) {
-                self.logger_.debug(message + ' succeed. Merged: ' +
-                                   C.lang.reflect.inspect(merged));
-                                   
+                var id = null,
+                    directory = null,
+                    mkdirp = C.require('mkdirp');
+                
+                logger.done(merged);
+                
+                id = C.uuid.v4();
+                directory = C.natives.path.resolve(self.root_, id);
+                logger.start('Ensuring the direcotry ' + direcotry +
+                             'to keep this generated configuration files exist');
+                mkdirp(directory, next);
+            },
+            function (made, next) {
+                logger.done();
                 // Process resources in the merged configuration
-                message = 'Processing the merged resources ' +
-                          C.lang.reflect.inspect(merged.resources) + 
-                          ' with context ' + 
-                          C.lang.reflect.inspect(merged.context);
-                self.logger_.debug(message + ' ...');
+                logger.start('Processing the merged resources ' +
+                             C.lang.reflect.inspect(merged.resources) + 
+                             ' with context ' + 
+                             C.lang.reflect.inspect(merged.context));
+                             
                 action.data = params;
-                self.processResources_(action, merged, dependencies, next);
+                self.processResources_(merged, directory, next);
             }
         ], function (error, result) {
             if (error) {
-                self.logger_.error(message + ' failed. Error: ' +
-                                   C.lang.reflect.inspect(error));
+                logger.error(error);
                 action.error(error);
                 return;
             }
-            self.logger_.debug(message + ' succeed. Result: ' +
-                               C.lang.reflect.inspect(result));
+            logger.done(result);
             action.done(result);
         });
     };
@@ -294,10 +298,9 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
      *                            error occurs. The signature of the callback is
      *                            'function (error) {}'
      */
-    GenerationHandler.prototype.postfilterConfigurations_ = function (action,
-                                                                      data,
-                                                                      configurations,
-                                                                      callback) {
+    GenerationHandler.prototype.postfilterConfigurations_ = function (
+        action, data, configurations, callback) {
+        
         var self = this,
             message = null,
             indexes = {},
@@ -378,41 +381,38 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
      *                            or some error occurs. The signature of the 
      *                            callback is 'function (error, result) {}'
      */
-    GenerationHandler.prototype.processResources_ = function (action, data, 
-                                                              configurations,
+    GenerationHandler.prototype.processResources_ = function (data, path,
                                                               callback) {
         var self = this,
             resources = data.resources,
             context = data.context,
             results = {};
-        
+            
         C.async.forEach(Object.keys(resources), function (name, next) {
             var resource = null,
                 processor = null,
-                message = null;
+                logger = C.logging.getStepLogger(self.logger_);
             
             resource = resources[name];
-            message = 'Processing resource ' + name + ' ' + 
-                      C.lang.reflect.inspect(resource) + ' with context ' +
-                      C.lang.reflect.inspect(context);
-                      
-            self.logger_.debug(message + ' ...');
-            
-            processor = self.factory_.get(self.resources_ + '.' + resource.type);
+            logger.start('Processing resource ' + name + ' ' + 
+                         C.lang.reflect.inspect(resource) + ' with context ' +
+                         C.lang.reflect.inspect(context));
+              
+            processor = self.factory_.get(self.resources_ + '.' + 
+                                          resource.type);
             // TODO: add processor factory?
-            processor.process(action, name, resource, context, configurations, 
-                              function (error, result) {
+            processor.process(name, resource, context, path, function (error, 
+                                                                       result) {
                 if (error) {
-                    self.logger_.debug(message + ' failed. Error: ' +
-                                       C.lang.reflect.inspect(error));
+                    logger.error(error);
                     next(error);
                     return;
                 }
-                self.logger_.debug(message + ' succeed. Result: ' + 
-                                   C.lang.reflect.inspect(result));
+                logger.done(result);
                 results[name] = result;
                 next();
             });
+            
         }, function (error) {
             callback(error, results);
         });
@@ -431,15 +431,15 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
      *                            error occurs. The signature of the callback is
      *                            'function (error) {}'
      */
-    GenerationHandler.prototype.prefilterConfigurations_ = function (action,
-                                                                     configurations, 
-                                                                     callback) {
+    GenerationHandler.prototype.prefilterConfigurations_ = function (
+        action, configurations, callback) {
         
         var self = this;
         
         C.async.forEach(configurations, function(configuration, next) {
             var filters = null,
-                message = null;
+                first = true,
+                logger = C.logging.getStepLogger(self.logging);
             
             filters = configuration.filters ? configuration.filters.before: [];
             
@@ -449,14 +449,13 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                                
             C.async.forEachSeries(filters, function (filter, next) {
                 
-                if (message) {
-                    self.logger_.debug(message + ' succeed.');
+                if (!first) {
+                    logger.done();
                 }
+                first = false;
+                logger.start('Executing filter ' + filter + 
+                             ' for configuration ' + configuration.name);
                 
-                message = 'Executing filter ' + filter + ' for configuration ' +
-                          configuration.name;
-                          
-                self.logger_.debug(message + ' ...');
                 
                 filter = self.factory_.get(self.filters_ + '.' + filter);
                 // TODO: check filter
@@ -465,8 +464,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                 
             }, function (error) {
                 if (error) {
-                    self.logger_.debug(message + ' failed. Error: ' +
-                                       C.lang.reflect.inspect(error));
+                    logger.error(error);
                     self.logger_.debug('Filtering configuration ' + 
                                        configuration.name + ' with filters: ' +
                                        C.lang.reflect.inspect(filters) +
@@ -475,7 +473,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                     return;
                 }
                 
-                self.logger_.debug(message + ' succeed.');
+                logger.done();
                 self.logger_.debug('Filtering configuration ' + 
                                    configuration.name + ' with filters: ' +
                                    C.lang.reflect.inspect(filters) + 
@@ -488,4 +486,4 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
     
     C.namespace('caligula.handlers.configuration').GenerationHandler = GenerationHandler;
 
-}, '0.0.1', { requires: ['caligula.handlers.base'] });
+}, '0.0.1', { requires: ['caligula.handlers.base', 'caligula.logging'] });

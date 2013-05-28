@@ -13,30 +13,10 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
      * @class FileResourceProcessor
      * @constructor
      * @extends ResourceProcessor
-     * @param {Object} config the config object for this processor
      */
-    function FileResourceProcessor (config) {
+    function FileResourceProcessor () {
         /* inheritance */
         this.super();
-        
-        /**
-         * The config object for this processor
-         * 
-         * @property config_
-         * @type Object
-         * @default {}
-         */
-        this.config_ = config || {};
-        
-        /**
-         * The root directory on the file system where the generated description
-         * file is to be saved.
-         * 
-         * @property root_
-         * @type String
-         * @default '/srv/salt'
-         */
-        this.root_ = this.config_.root || '/srv/salt';
     }
     
     C.lang.inherit(FileResourceProcessor, 
@@ -54,10 +34,9 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
      *                            some unexpected error occurs. The signature of
      *                            the callback is 'function (error, result) {}'
      */
-    FileResourceProcessor.prototype.process = function (resource, context, 
-                                                        callback) {
-        //
-        callback();
+    FileResourceProcessor.prototype.process = function (name, resource, context, 
+                                                        path, callback) {
+        
     };
     
     C.namespace('caligula.configuration.resources').FileResourceProcessor = FileResourceProcessor;

@@ -46,14 +46,15 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 action.data = { 'name': 'revision', 'value': 0 };
                 action.acquire('counter.increase', next);
             },
-            function (revision, meta, next) {
-                self.logger_.debug(message + ' succeed. Revision: ' + revision);
+            function (result, unused, next) {
+                self.logger_.debug(message + ' succeed. Result: ' + 
+                                   C.lang.reflect.inspect(result));
                 
                 message = 'Creating tag ' + params.name + ' with revision ' + 
-                          revision;
+                          result.value;
                 self.logger_.debug(message + ' ...');
                 action.data = params;
-                action.data.revision = revision;
+                action.data.revision = result.value;
                 action.acquire('data.configuration.tag.create', next);
             }
         ], function (error, result) {
@@ -102,7 +103,7 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
             self = this,
             message = null,
             revision = null,
-            configurations = null;
+            configurations = [];
         
         C.async.waterfall([
             function (next) { // reading the revision number for the specified 
@@ -112,12 +113,12 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 action.data = { name: params.tag };
                 action.acquire('data.configuration.tag.read', next);
             },
-            function (result, meta, next) { // reading the configuration collections
-                // TODO: check if the tag exist
+            function (result, unused, next) { // reading the configuration collections
+                
                 self.logger_.debug(message + ' succeed. Revision: ' + 
-                                   result.data.revision);
+                                   result.data[0].revision);
                                    
-                revision = result.data.revision;
+                revision = result.data[0].revision;
                 message = 'Reading the configurations satisfy the user ' +
                           'specified criteria ' +  
                           C.lang.reflect.inspect(params.criteria) +
@@ -138,20 +139,43 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 
                 action.data = {
                     criteria: params.criteria,
+                    fields: { id: 1, revision: 1, name: 1 },
                     operations: { sort: { revision: -1 }},
                     by: 'name',
                     aggregation: {
-                        revision: { '$first': 'revision' }
+                        revision: { '$first': 'revision' },
+                        id: { '$first': 'id' }
                     }
                 };
                 // TODO: configuration handler provides this feature?
                 action.acquire('data.configuration.group', next);
             },
-            function (result, meta, next) { // reading the history collections
-                self.logger_.debug(message + ' ...');
+            function (result, unused, next) {
+                var ids = null;
                 
-                // setup configuration dict based on current collection
-                configurations = result.data;
+                self.logger_.debug(message + ' succeed. Result: ' +
+                                   C.lang.reflect.inspect(result));
+                
+                if (0 === result.affected) {
+                    next(null, null, null);
+                    return;
+                }
+                
+                ids = result.data.map(function (item) { return item.id; });
+                message = 'Reading configuration objects whose id is in ' +
+                          ids.toString();
+                self.logger_.debug(message + ' ...');
+                action.data = { criteria: { id: { '$in': ids }}};
+                action.acquire('data.configuration.read', next);
+            },
+            function (result, unused, next) { // reading the history collections
+                if (result) {
+                    self.logger_.debug(message + ' succeed. Result: ' +
+                                       C.lang.reflect.inspect(result));
+                
+                    // setup configuration dict based on current collection
+                    configurations = result.data;
+                }
                 
                 // TODO: verify if it's necessary to query the history collection
                 
@@ -159,10 +183,12 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 // since the original action.data has been modified
                 action.data = {
                     criteria: params.criteria,
+                    fields: { id: 1, revision: 1, name: 1 },
                     operations: { sort: { revision: -1 }},
                     by: 'name',
                     aggregation: {
-                        revision: { '$first': 'revision' }
+                        revision: { '$first': 'revision' },
+                        id: { '$first': 'id' }
                     }
                 };
                 
@@ -173,9 +199,48 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 
                 self.logger_.debug(message + ' ...');
                 action.acquire('data.configuration-history.group', next);
+            },
+            function (result, unused, next) {
+                var ids = null;
+                
+                self.logger_.debug(message + ' succeed. Result: ' +
+                                   C.lang.reflect.inspect(result));
+                //
+                if (0 === result.affected) {
+                    next(null, null, null);
+                    return;
+                }
+                
+                ids = result.data.map(function (item) { return item.id; });
+                message = 'Reading history configuration objects whose id is' +
+                          ' in ' + ids.toString();
+                self.logger_.debug(message + ' ...');
+                action.data = { criteria: { id: { '$in': ids }}};
+                action.acquire('data.configuration-history.read', next);           
+            },
+            function (result, unused, next) {
+                var unique = {};
+                
+                if (result) {
+                    self.logger_.debug(message + ' succeed. Result: ' +
+                                       C.lang.reflect.inspect(result));
+                
+                    // setup configuration dict based on current collection
+                    configurations = configurations.concat(result.data || []);
+                }
+                
+                configurations = configurations.filter(function (item) {
+                    if (unique[item.name]) {
+                        return false;
+                    }
+                
+                    unique[item.name] = true;
+                    return true;
+                });
+                
+                next();
             }
         ], function(error, result) {
-            var unique = {};
             
             if (error) {
                 self.logger_.error(message + ' failed. Error: ' + 
@@ -184,17 +249,8 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 return;
             }
             
-            // merge the two collections
-            configurations = configurations.concat(result.data);
-            configurations = configurations.filter(function (item) {
-                if (unique[item.name]) {
-                    return false;
-                }
-                
-                unique[item.name] = true;
-                return true;
-            });
-            
+            self.logger_.debug(message + ' succeed. Result: ' +
+                               C.lang.reflect.inspect(configurations));
             action.done({ 
                 affected: configurations.length,
                 data: configurations

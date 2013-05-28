@@ -171,28 +171,6 @@ Condotti.add('caligula.errors.http', function (C) {
         ActionHandlerNotFoundError;
     
     /**
-     * Not acceptable
-     *
-     * @class NotAcceptableError
-     * @constructor
-     * @extends HttpError
-     * @param {Number} code the detailed error code
-     * @param {String} message the message describes this error
-     */
-    function NotAcceptableError (code, message) {
-        if (String === C.lang.reflect.getObjectType(code)) {
-            message = code;
-            code = 0;
-        }
-        /* inheritance */
-        this.super(406, 40600 + code, message);
-    }
-    
-    C.lang.inherit(NotAcceptableError, HttpError);
-    
-    C.namespace('caligula.errors').NotAcceptableError = NotAcceptableError;
-    
-    /**
      * This type of error is thrown when the action handler is found not be
      * a callable, because it's not a function, nor an object with a member
      * function 'call'.
@@ -204,10 +182,10 @@ Condotti.add('caligula.errors.http', function (C) {
      */
     function ActionHandlerNotCallableError (message) {
         /* inheritance */
-        this.super(1, message);
+        this.super(2, message);
     }
     
-    C.lang.inherit(ActionHandlerNotCallableError, NotAcceptableError);
+    C.lang.inherit(ActionHandlerNotCallableError, NotFoundError);
     
     C.namespace('caligula.errors').ActionHandlerNotCallableError = 
         ActionHandlerNotCallableError;
@@ -275,4 +253,27 @@ Condotti.add('caligula.errors.http', function (C) {
     }
     C.lang.inherit(RequestedRangeNotSatisfiableError, HttpError);
     C.namespace('caligula.errors').RequestedRangeNotSatisfiableError = RequestedRangeNotSatisfiableError;
+    
+    
+    /**
+     * This type of error is designed to be thrown when the required 
+     * functionality has not been implemented yet.
+     *
+     * @class NotImplementedError
+     * @constructor
+     * @extends HttpError
+     * @param {Number} code the detailed error code
+     * @param {String} message the error message
+     */
+    function NotImplementedError(code, message) {
+        if (String === C.lang.reflect.getObjectType(code)) {
+            message = code;
+            code = 0;
+        }
+        /* inheritance */
+        this.super(501, 50100 + code, message);
+    }
+    C.lang.inherit(NotImplementedError, HttpError);
+    C.namespace('caligula.errors').NotImplementedError = NotImplementedError;
+    
 }, '0.0.1', { requires: [] });

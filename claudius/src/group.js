@@ -92,7 +92,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.done(result);
                 
                 if (0 === result.affected) {
-                    next();
+                    next(null, null, null);
                     return;
                 }
                 
@@ -111,16 +111,15 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             },
             function (result, unused, next) {
                 
-                if (C.lang.reflect.isFunction(result)) {
-                    next = result;
-                    next();
+                if (!result) {
+                    next(null, null);
                     return;
                 }
                 
                 logger.done(result);
                 
                 if (0 === result.affected) {
-                    next();
+                    next(null, null);
                     return;
                 }
                 // multi jobs
@@ -138,10 +137,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 var status = {},
                     failed = false;
                 
-                if (C.lang.reflect.isFunction(result)) {
-                    next = result;
-                    result = undefined;
-                } else {
+                if (result) {
                     logger.done(result);
                 }
                 
@@ -201,6 +197,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 if ((status.state === State.DONE) && 
                     (status.operator === 'delete')) {
                     next(new C.caligula.errors.GroupNotFoundError(
+                        'Required group ' + params.name + ' does not exist'
                     ));
                 }
 
@@ -504,7 +501,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                                    C.lang.reflect.inspect(groups));
                 
                 if (0 === groups.length) {
-                    next();
+                    next(null, null);
                     return;
                 }
                 
@@ -521,13 +518,11 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 var available = null,
                     required = 0;
                 
-                if (C.lang.reflect.isFunction(result)) {
-                    next = result;
-                    result = [];
-                } else {
+                if (result) {
                     logger.done(result);
                 }
                 
+                result = result || [];
                 result.forEach(function (item) {
                     if (item.state !== State.OK) {
                         return;
@@ -865,7 +860,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      */
     function GroupNotFoundError (message) {
         /* inheritance */
-        this.super(2, message);
+        this.super(3, message);
     }
     C.lang.inherit(GroupNotFoundError, C.caligula.errors.NotFoundError);
 

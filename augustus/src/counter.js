@@ -60,7 +60,7 @@ Condotti.add('caligula.components.configuration.counter', function (C) {
                 return;
             }
 
-            action.done(result);
+            action.done(result.data);
         });
     };
     
@@ -92,7 +92,7 @@ Condotti.add('caligula.components.configuration.counter', function (C) {
                 return;
             }
 
-            action.done(result);
+            action.done(result.data);
         });
     };
 
