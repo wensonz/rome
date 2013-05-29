@@ -79,8 +79,7 @@ Condotti.add('caligula.components.file.base', function (C) {
                 action.acquire('data.file.read', next);
             },
             function (result, unused, next) { // Copy saved temp file 
-                var names = null,
-                    rs = null,
+                var rs = null,
                     ws = null;
                 
                 logger.done(result);
@@ -202,7 +201,7 @@ Condotti.add('caligula.components.file.base', function (C) {
                 action.data = { criteria: { name: params.name }};
                 action.acquire('data.file.read', next);
             },
-            function (result, next) {
+            function (result, unused, next) {
                 var url = null;
                 
                 logger.done(result);
