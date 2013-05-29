@@ -59,9 +59,9 @@ Condotti.add('caligula.components.configuration.base', function (C) {
             }
 
             self.logger_.debug(message + ' succeed. Revision: ' + 
-                               result.data.value);
+                               result.value);
                                
-            callback(null, result.data.value);
+            callback(null, result.value);
         });
     };
     
