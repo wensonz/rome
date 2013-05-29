@@ -110,10 +110,10 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
                 
                 path = C.natives.path.resolve(directory, name + '.sls');
                 logger.start('Saving configuration ' + 
-                             C.lang.reflect.inspect(salt)) +
-                             ' into file ' + file);
+                             C.lang.reflect.inspect(salt) +
+                             ' into file ' + path);
                 
-                C.natives.fs.writeFile(file, JSON.stringify(salt), 
+                C.natives.fs.writeFile(path, JSON.stringify(salt), 
                                        function (error) {
                     if (error) {
                         // TODO: refactor the message?
@@ -123,7 +123,7 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
                         return;
                     }
                     next();
-                }
+                });
             }
         ], function (error) {
             action.data = params;

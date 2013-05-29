@@ -23,7 +23,10 @@
                         "address": "",
                         "middlewares": [
                             { "name": "connect.json" },
-                            { "name": "multipart" }
+                            { 
+                                "name": "multipart", 
+                                "config": { "directory": "/tmp" }
+                            }
                         ]
                     }},
                     "1": { "reference": "contextualizer" },
