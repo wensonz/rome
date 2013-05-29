@@ -97,10 +97,9 @@ Condotti.add('caligula.components.file.base', function (C) {
                 logger.done();
                 
                 logger.start('Validate the uploaded file ' + 
-                             C.lang.reflect.inspect(action.files));
+                             C.lang.reflect.inspect(action.file));
                              
-                names = Object.keys(action.files);
-                if (0 === names.length) {
+                if (!action.file) {
                     next(new C.caligula.errors.InvalidArgumentError(
                         'A file is supposed to be uploaded via this API, but ' +
                         'it can not be found'
@@ -108,15 +107,7 @@ Condotti.add('caligula.components.file.base', function (C) {
                     return;
                 }
                 
-                if (names.length > 1) {
-                    next(new C.caligula.errors.InvalidArgumentError(
-                        'At most one file is allowed to be uploaded at the ' +
-                        'same time, but ' + names.length + ' are found.'
-                    ));
-                    return;
-                }
-                
-                file = action.files[names[0]];
+                file = action.file;
                 logger.done(file);
                 
                 logger.start('Comparing the md5 of the uploaded file ' + 

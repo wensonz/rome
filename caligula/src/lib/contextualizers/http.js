@@ -58,7 +58,7 @@ Condotti.add('caligula.contextualizers.http', function (C) {
         
         action.name = name;
         action.data = action.request.body;
-        action.files = action.request.files;
+        action.file = action.request.file;
         action.url = url;
         action.params = url.query; // TODO: add auth info
         
