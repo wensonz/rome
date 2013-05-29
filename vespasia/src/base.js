@@ -185,7 +185,6 @@ Condotti.add('caligula.components.file.base', function (C) {
      */
     FileHandler.prototype.download = function (action) {
         var params = action.data,
-            self = this,
             logger = C.logging.getStepLogger(this.logger_),
             file = null;
         
@@ -258,7 +257,6 @@ Condotti.add('caligula.components.file.base', function (C) {
      */
     FileHandler.prototype.lock_ = function(action, callback) {
         var params = action.data,
-            self = this,
             logger = C.caligula.logging.getStepLogger(this.logger_);
         
         logger.start('Calling lock.acquire on "file.' + params.name + '"');
@@ -295,7 +293,6 @@ Condotti.add('caligula.components.file.base', function (C) {
      */
     FileHandler.prototype.unlock_ = function(action, id, callback) {
         var params = action.data,
-            self = this,
             logger = C.caligula.logging.getStepLogger(this.logger_);
         
         logger.start('Calling lock.release on "file.' + params.name + '"');
