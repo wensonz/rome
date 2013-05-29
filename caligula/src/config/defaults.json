@@ -22,7 +22,8 @@
                         "port": 8080,
                         "address": "",
                         "middlewares": [
-                            { "name": "connect.json" }
+                            { "name": "connect.json" },
+                            { "name": "multipart" }
                         ]
                     }},
                     "1": { "reference": "contextualizer" },
