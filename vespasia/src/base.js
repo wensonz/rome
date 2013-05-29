@@ -60,7 +60,7 @@ Condotti.add('caligula.components.file.base', function (C) {
     FileHandler.prototype.upload = function (action) {
         var params = action.data,
             self = this,
-            logger = C.logging.getStepLogger(this.logger_),
+            logger = C.caligula.logging.getStepLogger(this.logger_),
             file = null,
             owner = null;
 
@@ -185,7 +185,7 @@ Condotti.add('caligula.components.file.base', function (C) {
      */
     FileHandler.prototype.download = function (action) {
         var params = action.data,
-            logger = C.logging.getStepLogger(this.logger_),
+            logger = C.caligula.logging.getStepLogger(this.logger_),
             file = null;
         
         if (!params.dryrun) { // temparory check

@@ -402,7 +402,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             nodes = null,
             locks = {},
             group = null,
-            logger = C.logging.getStepLogger(this.logger_);
+            logger = C.caligula.logging.getStepLogger(this.logger_);
 
         C.async.waterfall([
             function (next) { // Lock the group
@@ -608,7 +608,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         var params = action.data,
             self = this,
             locks = {},
-            logger = C.logging.getStepLogger(this.logger_);
+            logger = C.caligula.logging.getStepLogger(this.logger_);
         
         C.async.waterfall([
             function (next) { // Lock the group
@@ -649,7 +649,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     GroupHandler.prototype.pause = function (action) {
         var params = action.data,
             self = this,
-            logger = C.logging.getStepLogger(this.logger_),
+            logger = C.caligula.logging.getStepLogger(this.logger_),
             owner = null,
             group = null,
             log = null;

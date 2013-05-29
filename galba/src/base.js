@@ -30,9 +30,8 @@ Condotti.add('caligula.components.package.base', function (C) {
     PackageHandler.prototype.release = function (action) {
         var params = action.data,
             self = this,
-            logger = C.logging.getStepLogger(this.logger_),
-            owner = null,
-            package = null;
+            logger = C.caligula.logging.getStepLogger(this.logger_),
+            owner = null;
         
         C.async.waterfall([
             function (next) { // Lock the package
@@ -129,8 +128,7 @@ Condotti.add('caligula.components.package.base', function (C) {
      */
     PackageHandler.prototype.fetch = function (action) {
         var params = action.data,
-            self = this,
-            logger = C.logging.getStepLogger(this.logger_);
+            logger = C.caligula.logging.getStepLogger(this.logger_);
             
         if (!params.dryrun) {
             action.error(new C.caligula.errors.NotImplementedError(
