@@ -276,4 +276,25 @@ Condotti.add('caligula.errors.http', function (C) {
     C.lang.inherit(NotImplementedError, HttpError);
     C.namespace('caligula.errors').NotImplementedError = NotImplementedError;
     
+    /**
+     * Precondition failed.
+     *
+     * @class PreconditionFailedError
+     * @constructor
+     * @extends HttpError
+     * @param {Number} code the detailed error code
+     * @param {String} message the error message
+     */
+    function PreconditionFailedError(code, message) {
+        if (String === C.lang.reflect.getObjectType(code)) {
+            message = code;
+            code = 0;
+        }
+        /* inheritance */
+        this.super(412, 41200 + code, message);
+    }
+    C.lang.inherit(PreconditionFailedError, HttpError);
+    C.namespace('caligula.errors').PreconditionFailedError = PreconditionFailedError;
+    
+    
 }, '0.0.1', { requires: [] });

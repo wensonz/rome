@@ -314,5 +314,55 @@ Condotti.add('caligula.components.file.base', function (C) {
     };
     
     C.namespace('caligula.handlers').FileHandler = FileHandler;
+    
+    /**
+     * This type of error is desgiend to be thrown when the required file can
+     * not be found.
+     * 
+     * @class FileNotFoundError
+     * @constructor
+     * @extends NotFoundError
+     * @param {String} message the error message
+     */
+    function FileNotFoundError (message) {
+        /* inheritance */
+        this.super(3, message);
+    }
+    C.lang.inherit(FileNotFoundError, C.caligula.errors.NotFoundError);
+    C.namespace('caligula.errors').FileNotFoundError = FileNotFoundError;
+    
+    
+    /**
+     * This type of error is desgiend to be thrown when the md5 sum of the
+     * uploaded file does not match with the provided one in params.
+     * 
+     * @class UploadedFileCorruptedError
+     * @constructor
+     * @extends PreconditionFailedError
+     * @param {String} message the error message
+     */
+    function UploadedFileCorruptedError (message) {
+        /* inheritance */
+        this.super(1, message);
+    }
+    C.lang.inherit(UploadedFileCorruptedError, C.caligula.errors.PreconditionFailedError);
+    C.namespace('caligula.errors').UploadedFileCorruptedError = UploadedFileCorruptedError;
+
+    
+    /**
+     * This type of error is desgiend to be thrown when the md5 sum of the
+     * uploaded file does not match with the provided one in params.
+     * 
+     * @class FileAlreadyExistError
+     * @constructor
+     * @extends ConflictError
+     * @param {String} message the error message
+     */
+    function FileAlreadyExistError (message) {
+        /* inheritance */
+        this.super(3, message);
+    }
+    C.lang.inherit(FileAlreadyExistError, C.caligula.errors.ConflictError);
+    C.namespace('caligula.errors').FileAlreadyExistError = FileAlreadyExistError;
 
 }, '0.0.1', { requires: ['caligula.handlers.base', 'caligula.logging'] });
