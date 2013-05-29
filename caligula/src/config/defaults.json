@@ -25,7 +25,7 @@
                             { "name": "connect.json" },
                             { 
                                 "name": "multipart", 
-                                "config": { "directory": "/tmp" }
+                                "config": [ {"directory": "/tmp" } ]
                             }
                         ]
                     }},
