@@ -315,5 +315,7 @@ Condotti.add('caligula.components.file.base', function (C) {
             callback();
         });
     };
+    
+    C.namespace('caligula.handlers').FileHandler = FileHandler;
 
 }, '0.0.1', { requires: ['caligula.handlers.base', 'caligula.logging'] });
