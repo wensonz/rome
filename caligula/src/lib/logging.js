@@ -3,7 +3,7 @@
  * 
  * @module caligula.utils.logging
  */
-Condotti.add('caligula.utils.logging', function (C) {
+Condotti.add('caligula.logging', function (C) {
 
     /**
      * This StepLogger class is designed as a helper, and provides the facility
