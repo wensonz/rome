@@ -140,7 +140,10 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
             dependencies = null,
             names = null,
             merged = null,
-            logger = C.logging.getStepLogger(this.logger_);
+            logger = C.logging.getStepLogger(this.logger_),
+            id = null, // the id for this generation, which is also used as part
+                       // of the directory to save the generated files
+            directory = null; // the directory contains the generated files
         
         // TODO: handle the case when there is already a job to generate the
         //       configuration for this node and with this tag
@@ -220,7 +223,6 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                 self.prefilterConfigurations_(action, dependencies, next);
             },
             function (next) { // merge all configurations into one object
-                var merger = null;
                 logger.done();
                 
                 logger.start('Merging configurations for node ' + params.node + 
@@ -251,9 +253,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                                                next);
             },
             function (next) {
-                var id = null,
-                    directory = null,
-                    mkdirp = C.require('mkdirp');
+                var mkdirp = C.require('mkdirp');
                 
                 logger.done(merged);
                 
@@ -272,7 +272,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                              C.lang.reflect.inspect(merged.context));
                              
                 action.data = params;
-                self.processResources_(merged, directory, next);
+                self.processResources_(action, merged, directory, next);
             }
         ], function (error, result) {
             if (error) {
@@ -381,7 +381,8 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
      *                            or some error occurs. The signature of the 
      *                            callback is 'function (error, result) {}'
      */
-    GenerationHandler.prototype.processResources_ = function (data, path,
+    GenerationHandler.prototype.processResources_ = function (action, data, 
+                                                              directory,
                                                               callback) {
         var self = this,
             resources = data.resources,
@@ -401,8 +402,8 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
             processor = self.factory_.get(self.resources_ + '.' + 
                                           resource.type);
             // TODO: add processor factory?
-            processor.process(name, resource, context, path, function (error, 
-                                                                       result) {
+            processor.process(action, name, resource, context, directory, 
+                              function (error, result) {
                 if (error) {
                     logger.error(error);
                     next(error);

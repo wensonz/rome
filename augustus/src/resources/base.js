@@ -40,7 +40,7 @@ Condotti.add('caligula.components.configuration.resources.base', function (C) {
      *                            the callback is 'function (error, result) {}'
      */
     ResourceProcessor.prototype.process = function (action, name, resource, 
-                                                    context, configurations, 
+                                                    context, directory, 
                                                     callback) {
         callback(new C.errors.NotImplementedError('This process method is not' +
                                                   ' implemented here, and is ' +
