@@ -86,7 +86,7 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
                 };
                 action.acquire('file.download', next);
             },
-            function (result, next) {
+            function (result, unused, next) {
                 var salt = {},
                     clone = null,
                     managed = [],
