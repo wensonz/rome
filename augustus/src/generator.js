@@ -440,7 +440,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
         C.async.forEach(configurations, function(configuration, next) {
             var filters = null,
                 first = true,
-                logger = C.caligula.logging.getStepLogger(self.logging);
+                logger = C.caligula.logging.getStepLogger(self.logger_);
             
             filters = configuration.filters ? configuration.filters.before: [];
             
