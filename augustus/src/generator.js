@@ -223,6 +223,8 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                 self.prefilterConfigurations_(action, dependencies, next);
             },
             function (next) { // merge all configurations into one object
+                var merger = null;
+                
                 logger.done();
                 
                 logger.start('Merging configurations for node ' + params.node + 
@@ -259,7 +261,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                 
                 id = C.uuid.v4();
                 directory = C.natives.path.resolve(self.root_, id);
-                logger.start('Ensuring the direcotry ' + direcotry +
+                logger.start('Ensuring the direcotry ' + directory +
                              'to keep this generated configuration files exist');
                 mkdirp(directory, next);
             },
