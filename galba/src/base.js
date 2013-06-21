@@ -180,4 +180,6 @@ Condotti.add('caligula.components.package.base', function (C) {
         });
     };
     
+    C.namespace('caligula.handlers').PackageHandler = PackageHandler;
+    
 }, '0.0.1', { requires: ['caligula.handlers.base', 'caligula.logging'] });

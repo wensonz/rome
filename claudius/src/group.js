@@ -107,7 +107,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                         operation: log.id
                     }
                 }};
-                action.acquire('orchestration.read', next);
+                action.acquire('data.orchestration.read', next);
             },
             function (result, unused, next) {
                 
@@ -486,18 +486,18 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 action.acquire('data.publishing.group.operation.group', next);
             },
             function (result, unused, next) { // Read status of result groups
-        	    var groups = null;
-        	    
-            	logger.done(result);
+                var groups = null;
                 
-            	result.data = result.data || [];
-            	groups = reuslt.data.filter(function (item) { 
-            	    return item.operator === 'delete'; 
-            	}).map(function (item) {
-            	    return item.group;
-            	});
-        	    
-            	self.logger_.debug('Groups being or has been deleted are: ' +
+                logger.done(result);
+                
+                result.data = result.data || [];
+                groups = result.data.filter(function (item) { 
+                    return item.operator === 'delete'; 
+                }).map(function (item) {
+                    return item.group;
+                });
+                
+                self.logger_.debug('Groups being or has been deleted are: ' +
                                    C.lang.reflect.inspect(groups));
                 
                 if (0 === groups.length) {
