@@ -49,7 +49,7 @@ Condotti.add('caligula.components.package.base', function (C) {
                 }};
                 action.acquire('data.package.read', next);
             },
-            function (result, next) {
+            function (result, unused, next) {
                 var name = null;
                 
                 logger.done(result);
@@ -72,7 +72,7 @@ Condotti.add('caligula.components.package.base', function (C) {
                 action.data = { name: name, md5: params.md5 };
                 action.acquire('file.upload', next);
             },
-            function (result, next) {
+            function (result, unused, next) {
                 logger.done();
                 
                 action.data = params;
@@ -146,7 +146,7 @@ Condotti.add('caligula.components.package.base', function (C) {
                 }};
                 action.acquire('data.package.read', next);
             },
-            function (result, next) {
+            function (result, unused, next) {
                 var name = null;
                 
                 logger.done(result);
