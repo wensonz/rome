@@ -606,9 +606,8 @@ Orca.prototype.dispatch_ = function (target, message) {
     
     this.logger_.debug('Topic "' + target + '" is initialized first time');
     topic = this.kafka_.topic(target, this.config_.producer);
-    topic.once('drain', function () {
-        topic.write(content);
-        logger.done();
+    topic.on('drain', function () {
+        self.logger_.debug('Topic ' + target + ' is writable now');
     }).on('error', function (error) {
         self.logger_.error('Error occurs on the producer of topic "' +
                            target + '". Details: ' +
@@ -623,6 +622,9 @@ Orca.prototype.dispatch_ = function (target, message) {
         //         are simply logged and then ignored.
         //         TODO: test it?
     });
+    
+    topic.write(content);
+    logger.done();
 };
 
 

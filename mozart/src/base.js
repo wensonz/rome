@@ -195,7 +195,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
             self.logger_.debug('Create topic ' + node + ' for the first time');
             topic = self.kafka_.topic(node, self.config_.producer);
             
-            topic.once('drain', function () {
+            topic.on('drain', function () {
                 self.logger_.debug('Topic ' + node + ' is ready to write');
             }).on('error', function (error) {
                 self.logger_.error('Error occurs on the producer of topic "' +
