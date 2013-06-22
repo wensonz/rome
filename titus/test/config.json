@@ -1,20 +1,31 @@
 {
-    "kafka": {
-        "brokers": [{
-            "id": 0, "host": "10.75.15.238", "port": 9092
-        }],
-        "compression": "gzip",
-        "queueTime": 200,
-        "batchSize": 1,
-        "maxFetchDelay": 1000
+    "condotti": {
+        "condotti.server.logging": { "log4js": {
+            "levels": {
+                "Condotti": "INFO",
+                "Kafka - API": "WARN"
+            },
+            "appenders": [{"type": "console"}]
+        }}
     },
-    "producer": {
-        "partitions": { "consume": ["0-0"], "produce": ["0:1"] }
-    },
-    "consumer": {
-        "partitions": { "consume": ["0-0"], "produce": ["0:1"] }
-    },
-    "id": "10.210.213.51",
-    "timeout": 10000,
-    "root": "/tmp/rome/"
+    "orca": {
+        "kafka": {
+            "brokers": [{
+                "id": 0, "host": "10.75.15.238", "port": 9092
+            }],
+            "compression": "gzip",
+            "queueTime": 200,
+            "batchSize": 1,
+            "maxFetchDelay": 1000
+        },
+        "producer": {
+            "partitions": { "consume": ["0-0"], "produce": ["0:1"] }
+        },
+        "consumer": {
+            "partitions": { "consume": ["0-0"], "produce": ["0:1"] }
+        },
+        "id": "10.210.213.51",
+        "timeout": 10000,
+        "root": "/tmp/rome/"
+    }
 }

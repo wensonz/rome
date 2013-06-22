@@ -533,7 +533,7 @@ Orca.prototype.handleExecCommand_ = function (message) {
                         signal: signal,
                         cancelled: child.cancelled,
                         timeout: child.timeout
-                    }, null, 4);
+                    }, null, 4)
                 );
                 
                 delete self.running_[message.job];
@@ -647,7 +647,7 @@ if (require.main === module) {
     }
     process.stdout.write('\t\t[ OK ]\n');
     
-    C = Condotti(config.condotti);
+    C = condotti.Condotti(config.condotti);
     
     try {
         new Orca(config.orca).run();
