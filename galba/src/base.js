@@ -180,6 +180,112 @@ Condotti.add('caligula.components.package.base', function (C) {
         });
     };
     
+    /**********************************************************************
+     *                                                                    *
+     *                        PRIVATE MEMBERS                             *
+     *                                                                    *
+     **********************************************************************/
+    
+    /**
+     * Lock the file to be created
+     *
+     * @method lock_
+     * @param {Action} action the action which causes this collection lock
+     * @param {Function} callback the callback function to be invoked after the
+     *                            lock has been acquired successfully, or
+     *                            some error occurs. The signature of the
+     *                            callback is 'function (error, id) {}'
+     */
+    PackageHandler.prototype.lock_ = function(action, callback) {
+        var params = action.data,
+            logger = C.caligula.logging.getStepLogger(this.logger_);
+        
+        logger.start('Calling lock.acquire on "package.' + params.name + '"');
+        
+        action.data = { 
+            name: 'package.' + params.name,
+            lease: 10000 // double the lifespan for calling file.upload
+        }; 
+        
+        action.acquire('lock.acquire', function (error, result) {
+            action.data = params;
+            
+            if (error) {
+                logger.error(error);
+                callback(error, null);
+                return;
+            }
+            
+            logger.done(result);
+            callback(null, result);
+        });
+    };
+    
+    /**
+     * Unlock the pre-acquired file lock
+     *
+     * @method unlock_
+     * @param {Action} action the action which requires this lock
+     * @param {String} id the owner id of the lock currently hold
+     * @param {Function} callback the callback function to be invoked after the
+     *                            lock has been acquired successfully, or
+     *                            some error occurs. The signature of the
+     *                            callback is 'function (error) {}'
+     */
+    PackageHandler.prototype.unlock_ = function(action, id, callback) {
+        var params = action.data,
+            logger = C.caligula.logging.getStepLogger(this.logger_);
+        
+        logger.start('Calling lock.release on "package.' + params.name + '"');
+        
+        action.data = { name: 'package.' + params.name, owner: id };
+        action.acquire('lock.release', function (error) {
+            action.data = params;
+            
+            if (error) {
+                logger.error(error);
+                // callback(error, null);
+                callback(); // It's safe not to report errors in unlock
+                return;
+            }
+            
+            logger.done();
+            callback();
+        });
+    };
+    
     C.namespace('caligula.handlers').PackageHandler = PackageHandler;
+    
+    /**
+     * This type of error is desgiend to be thrown when the required package can
+     * not be found.
+     * 
+     * @class PackageNotFoundError
+     * @constructor
+     * @extends NotFoundError
+     * @param {String} message the error message
+     */
+    function PackageNotFoundError (message) {
+        /* inheritance */
+        this.super(4, message);
+    }
+    C.lang.inherit(PackageNotFoundError, C.caligula.errors.NotFoundError);
+    C.namespace('caligula.errors').PackageNotFoundError = PackageNotFoundError;
+    
+    /**
+     * This type of error is desgiend to be thrown when the version of the
+     * package to be release already exists
+     * 
+     * @class PackageAlreadyExistError
+     * @constructor
+     * @extends ConflictError
+     * @param {String} message the error message
+     */
+    function PackageAlreadyExistError (message) {
+        /* inheritance */
+        this.super(4, message);
+    }
+    C.lang.inherit(PackageAlreadyExistError, C.caligula.errors.ConflictError);
+    C.namespace('caligula.errors').PackageAlreadyExistError = PackageAlreadyExistError;
     
 }, '0.0.1', { requires: ['caligula.handlers.base', 'caligula.logging'] });

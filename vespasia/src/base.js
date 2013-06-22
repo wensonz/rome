@@ -349,8 +349,8 @@ Condotti.add('caligula.components.file.base', function (C) {
 
     
     /**
-     * This type of error is desgiend to be thrown when the md5 sum of the
-     * uploaded file does not match with the provided one in params.
+     * This type of error is desgiend to be thrown when file uploaded already 
+     * exists
      * 
      * @class FileAlreadyExistError
      * @constructor
