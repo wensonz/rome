@@ -145,7 +145,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                 
                 self.dispatch_(job, message, next);
             }
-        ], function (error) {
+        ], function (error, result) {
             if (error) {
                 logger.error(error);
                 action.error(error);
