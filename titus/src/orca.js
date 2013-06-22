@@ -429,8 +429,8 @@ Orca.prototype.handleUnsupportedCommand_ = function (message) {
         error: {
             code: 415, // unsupported media type
             message: 'Unsupported command "' + message.command + '" found.'
-        };
-    }
+        }
+    };
     
     this.logger_.error('Job ' + message.job + 
                        ' requires an unsupported command "' + message.command + 
