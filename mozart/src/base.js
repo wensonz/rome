@@ -118,7 +118,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                 action.data = job;
                 action.acquire('data.orchestration.create', next);
             },
-            function (result, next) { //
+            function (result, unused, next) { //
                 var message = null;
                 
                 if (result) {
@@ -281,7 +281,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
         // job completed
         clearTimeout(dispatch.timer);
         
-        this.logger_.warn('Request ' + message.id + ' for job ' + 
+        this.logger_.debug('Request ' + message.id + ' for job ' + 
                           C.lang.reflect.inspect(dispatch.job) + 
                           ' complete. Result: ' +
                           C.lang.reflect.inspect(dispatch.result));
