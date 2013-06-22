@@ -484,7 +484,7 @@ Orca.prototype.handleExecCommand_ = function (message) {
             var child = null,
                 output = null;
             
-            logger.done(make);
+            logger.done(made);
             
             logger.start('Creating stdout/err output file under ' + path);
             try {
