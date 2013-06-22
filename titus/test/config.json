@@ -3,7 +3,7 @@
         "condotti.server.logging": { "log4js": {
             "levels": {
                 "Condotti": "INFO",
-                "Kafka - API": "WARN"
+                "Kafka - ORCA": "WARN"
             },
             "appenders": [{"type": "console"}]
         }}

@@ -132,7 +132,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                     command: 'EXEC',
                     params: {
                         command: job.command,
-                        params: job.params,
+                        arguments: job.arguments,
                         timeout: job.timeout || 60000 // 1 min
                     }
                 };
@@ -216,7 +216,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                               ' timeout. Result: ' +
                               C.lang.reflect.inspect(dispatch.result));
                               
-            callback(dispatch.result);
+            callback && callback(dispatch.result);
             delete this.dispatching_[message.id];
         }, this.config_.timeout);
         
@@ -281,7 +281,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                           ' complete. Result: ' +
                           C.lang.reflect.inspect(dispatch.result));
         
-        dispatch.callback(dispatch.result);
+        dispatch.callback && dispatch.callback(dispatch.result);
     };
     
     // TODO: stat, tee, cancel
