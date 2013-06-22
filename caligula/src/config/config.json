@@ -56,7 +56,7 @@
             "type": "caligula.handlers.configuration.GenerationHandler",
             "params": {
                 "0": {"value": {}},
-                "1": { "reference": "dotti-factory" }
+                "1": { "reference": "dotti" }
             }
         },
         "handlers.counter": {
