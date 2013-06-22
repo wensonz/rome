@@ -187,12 +187,14 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
             var topic = self.kafka_.topics[node];
             
             if (topic) {
+                self.logger_.debug('Topic ' + node + ' has been created before');
                 topic.write(content);
                 return;
             }
             
             topic = self.kafka_.topic(node, self.config_.producer);
             topic.once('drain', function () {
+                self.logger_.debug('Topic ' + node + ' is ready to write');
                 topic.write(content);
             }).on('error', function (error) {
                 self.logger_.error('Error occurs on the producer of topic "' +
@@ -217,7 +219,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                               C.lang.reflect.inspect(dispatch.result));
                               
             callback && callback(dispatch.result);
-            delete this.dispatching_[message.id];
+            delete this.dispatching_[dispatch.id];
         }, this.config_.timeout);
         
         dispatch = {
