@@ -221,7 +221,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                               ' timeout. Result: ' +
                               C.lang.reflect.inspect(dispatch.result));
                               
-            callback && callback(dispatch.result);
+            callback && callback(null, dispatch.result);
             delete self.dispatching_[message.id];
         }, this.config_.timeout);
         
@@ -286,7 +286,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                           ' complete. Result: ' +
                           C.lang.reflect.inspect(dispatch.result));
         
-        dispatch.callback && dispatch.callback(dispatch.result);
+        dispatch.callback && dispatch.callback(null, dispatch.result);
     };
     
     // TODO: stat, tee, cancel
