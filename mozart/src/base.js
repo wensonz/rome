@@ -4,6 +4,38 @@
  * @module caligula.components.orchestration.base
  */
 Condotti.add('caligula.components.orchestration.base', function (C) {
+    /**
+     * The enumerables defined for node state
+     * 
+     * @property NodeState
+     * @type Object
+     */
+    var NodeState = {
+        RUNNING: 0,
+        DONE: 10,
+        EXITED: 11,
+        CANCELLED: 12,
+        KILLED: 13,
+        TIMEOUT: 14,
+        FAILED: 20 // Unknown state of the child process
+    };
+    
+    C.namespace('caligula.orchestration').NodeState = NodeState;
+    
+    /**
+     * The enumerables defined for job state
+     *
+     * @property JobState
+     * @type Object
+     */
+    var JobState = {
+        RUNNING: 0,
+        DONE: 1,
+        CANCELLING: 2,
+        CANCELLED: 3
+    };
+    
+    C.namespace('caligula.orchestration').JobState = JobState;
     
     /**
      * This OrchestrationHandler is a child class of Handler, and designed to 
@@ -93,6 +125,274 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
     };
     
     /**
+     * Return the stat of the specified orchestration job
+     *
+     * @method stat
+     * @param {Action} action the "stat" action to be handled
+     */
+    OrchestrationHandler.prototype.stat = function (action) {
+        var self = this,
+            params = action.data,
+            job = null,
+            logger = C.logging.getStepLogger(this.logger_);
+            
+        C.async.waterfall([
+            function (next) {
+                logger.start('Querying the job object with id ' + params.id);
+                action.data = { criteria: { id: params.id }};
+                action.acquire('data.orchestration.read', next);
+            },
+            function (result, unused, next) {
+                var message = null;
+                
+                logger.done(result);
+                
+                if (result.affected < 1) {
+                    next(new C.caligula.errors.JobNotFoundError(
+                        'Required job ' + params.id + ' can not be found'
+                    ));
+                    return;
+                }
+                
+                job = result.data[0];
+                
+                if (job.state.job === JobState.DONE ||
+                    job.state.job === JobState.CANCELLED) {
+                    self.logger_.debug(
+                        'Job ' + job.id + ' has been ' +
+                        (job.state.job === JobState.DONE ? 'completed' : 
+                                                           'cancelled.')
+                    );
+                    next(null, null);
+                    return;
+                }
+                
+                logger.start('Sending "STAT" commands to nodes ' +
+                             job.nodes.toString() + ' for job ' + job.id);
+                
+                message = {
+                    id: C.uuid.v4(),
+                    sender: self.config_.id,
+                    job: job.id,
+                    command: 'STAT'
+                };
+                self.dispatch_(job.nodes, message, next);
+            },
+            function (result, next) {
+                var completed = true;
+                
+                if (!result) {
+                    next(null, null);
+                    return;
+                }
+                
+                logger.done(result);
+                // merge the node states
+                Object.keys(result).forEach(function (node) {
+                    if ((result[node] !== job.state.nodes[node]) &&
+                        (job.state.nodes[node]) &&
+                        (result[node].error) &&
+                        (result[node].error.code === 40800)) {
+                        result[node] = job.state.nodes[node];
+                    }
+                    if (result[node].result.state === NodeState.RUNNING) {
+                        completed = false;
+                    }
+                });
+                
+                job.state.nodes = result;
+                if (completed) {
+                    job.state.job = (job.state.job === JobState.RUNNING ?
+                                     JobState.DONE : 
+                                     JobState.CANCELLED);
+                }
+                
+                logger.start('Saving the new generated state object ' +
+                             C.lang.reflect.inspect(job.state));
+                action.data = {
+                    criteria: { id: job.id },
+                    update: { "$set": {
+                        state: job.state
+                    }}
+                };
+                action.acquire(
+                    'data.orchestration.update', 
+                    function (error, result) {
+                        if (error) { // ignore the error
+                            logger.error(error);
+                            next(null, null);
+                            return;
+                        }
+                        
+                        next(null, result);
+                    }
+                );
+            }
+        ], function (error, result) {
+            if (error) {
+                logger.error(error);
+                action.error(error);
+                return;
+            }
+            
+            if (result) {
+                logger.done(result);
+            }
+            
+            action.done(job.state);
+        })
+    };
+    
+    /**
+     * Return the output of the specified job
+     *
+     * @method tee
+     * @param {Action} action the "TEE" action to be handled
+     * @return {} 
+     */
+    OrchestrationHandler.prototype.tee = function (action) {
+        var self = this,
+            params = action.data,
+            logger = C.logging.getStepLogger(this.logger_),
+            job = null;
+        
+        C.async.waterfall([
+            function (next) {
+                logger.start('Querying the job object with id ' + params.id);
+                action.data = { criteria: { id: params.id }};
+                action.acquire('data.orchestration.read', next);
+            },
+            function (result, unused, next) {
+                var message = null;
+                
+                logger.done(result);
+                
+                if (result.affected < 1) {
+                    next(new C.caligula.errors.JobNotFoundError(
+                        'Required job ' + params.id + ' can not be found'
+                    ));
+                    return;
+                }
+                
+                job = result.data[0];
+                
+                logger.start('Sending "TEE" commands to nodes ' +
+                             job.nodes.toString() + ' for job ' + job.id);
+                
+                message = {
+                    id: C.uuid.v4(),
+                    sender: self.config_.id,
+                    job: job.id,
+                    command: 'TEE'
+                };
+                self.dispatch_(job.nodes, message, next);
+            }
+        ], function (error, result) {
+            if (error) {
+                logger.error(error);
+                action.error(error);
+                return;
+            }
+            
+            logger.done(result);
+            action.done(result);
+        });
+    };
+
+    /**
+     * Cancel the specified job
+     *
+     * @method cancel
+     * @param {Action} action the "CANCEL" action to be handled
+     */
+    OrchestrationHandler.prototype.cancel = function (action) {
+        var self = this,
+            params = action.data,
+            logger = C.logging.getStepLogger(this.logger_),
+            job = null;
+        
+        C.async.waterfall([
+            function (next) {
+                logger.start('Querying the job object with id ' + params.id);
+                action.data = { criteria: { id: params.id }};
+                action.acquire('data.orchestration.read', next);
+            },
+            function (result, unused, next) {
+                var message = null;
+                
+                logger.done(result);
+                
+                if (result.affected < 1) {
+                    next(new C.caligula.errors.JobNotFoundError(
+                        'Required job ' + params.id + ' can not be found'
+                    ));
+                    return;
+                }
+                
+                job = result.data[0];
+                if (job.state.job !== JobState.RUNNING) {
+                    message = 'Job ' + job.id;
+                    switch (job.state.job) {
+                    case JobState.CANCELLING:
+                        message += ' is being cancelled.';
+                        break;
+                    case JobState.DONE:
+                        message += ' has been completed.';
+                        break;
+                    case JobState.CANCELLED:
+                        message += ' has been cancelled.';
+                        break;
+                    }
+                    self.logger_.warn(message);
+                    
+                    next(new C.caligula.errors.JobNotCancelledError(
+                        message
+                    ));
+                    return;
+                }
+                
+                job.state.job = JobState.CANCELLING;
+                
+                action.data = {
+                    criteria: { id: job.id },
+                    update: {
+                        '$set': { 'state.job': job.state.job }
+                    }
+                };
+                logger.start('Updating the job state to be cancelling');
+                action.acquire('data.orchestration.update', next);
+            },
+            function (result, unused, next) {
+                logger.done(result);
+                
+                // TODO: check if result.affected === 1
+                
+                logger.start('Sending "CANCEL" commands to nodes ' +
+                             job.nodes.toString() + ' for job ' + job.id);
+                
+                message = {
+                    id: C.uuid.v4(),
+                    sender: self.config_.id,
+                    job: job.id,
+                    command: 'CANCEL'
+                };
+                
+                self.dispatch_(job.nodes, message);
+                next();
+            }
+        ], function (error) {
+            if (error) {
+                logger.error(error);
+                action.error(error);
+                return;
+            }
+            
+            logger.done();
+            action.done();
+        });
+    };
+    
+    /**
      * Create an orchestration job for parallel/serial remote execution.
      * 
      * @method create
@@ -105,6 +405,10 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
             
         // TODO: validations
         job.id = C.uuid.v4();
+        job.state = {
+            job: JobState.RUNNING,
+            nodes: {}
+        };
         
         C.async.waterfall([
             function (next) { // save into the database
@@ -142,20 +446,57 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                              ' to the targeting nodes ' + 
                              job.nodes.toString());
         
-                
-                self.dispatch_(job, message, next);
+                // TODO: update the result
+                self.dispatch_(job, message);
+                // Return to the caller immediately
+                next();
             }
-        ], function (error, result) {
+        ], function (error) {
             if (error) {
                 logger.error(error);
                 action.error(error);
                 return;
             }
             
-            logger.done(result);
+            logger.done();
             action.done({ id: job.id });
         });
     };
+    
+    /**
+     * Called when the dispatching timeout, which complement the stat result for
+     * the nodes that timeout with an request timeout error object.
+     *
+     * @method onDispatchTimeout_
+     * @param {Object} dispatch the dispatch object which timeout
+     */
+    OrchestrationHandler.prototype.onDispatchTimeout_ = function (dispatch) {
+        var error = new C.caligula.errors.RequestTimeoutError('Request timeout');
+        
+        this.logger_.warn('Request ' + message.id + ' for job ' + 
+                          C.lang.reflect.inspect(dispatch.job) + 
+                          ' timeout. Result: ' +
+                          C.lang.reflect.inspect(dispatch.responses));
+        
+        dispatch.job.nodes.forEach(function (node) {
+            if (node in dispatch.responses) {
+                return;
+            }
+            dispatch.responses[node] = { error: {
+                code: error.code,
+                message: error.message
+            }};
+        });
+        
+        delete self.dispatching_[dispatch.id];
+        
+        if (!dispatch.callback) {
+            return;
+        }
+        
+        dispatch.callback(null, dispatch.responses);
+    };
+    
     
     /**
      * Dispatch the message to the specified targets
@@ -173,8 +514,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
      *                            specified time interval. When timeout, the API
      *                            will return whatever it received to the caller
      */
-    OrchestrationHandler.prototype.dispatch_ = function (job, message, 
-                                                         callback) {
+    OrchestrationHandler.prototype.dispatch_ = function (job, message, callback) {
         var content = null,
             timer = null,
             self = this,
@@ -215,25 +555,19 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
             topic.write(content);
         });
         
-        timer = setTimeout(function () {
-            self.logger_.warn('Request ' + message.id + ' for job ' + 
-                              C.lang.reflect.inspect(job) + 
-                              ' timeout. Result: ' +
-                              C.lang.reflect.inspect(dispatch.result));
-                              
-            callback && callback(null, dispatch.result);
-            delete self.dispatching_[message.id];
-        }, this.config_.timeout);
+        // Timeout handler
+        timer = setTimeout(this.onDispatchTimeout_.bind(this, dispatch), 
+                           this.config_.timeout);
         
         dispatch = {
             id: message.id,
             job: job,
             timer: timer,
-            result: {},
+            responses: {},
             callback: callback
         };
         
-        this.dispatching_[message.id] = dispatch;
+        this.dispatching_[dispatch.id] = dispatch;
     };
     
     /**
@@ -266,14 +600,14 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
             return;
         }
         
-        dispatch.result[message.sender] = message;
+        dispatch.responses[message.sender] = message;
         
-        if (Object.keys(dispatch.result).length < dispatch.job.nodes.length) {
+        if (Object.keys(dispatch.responses).length < dispatch.job.nodes.length) {
             this.logger_.debug('Request ' + message.id + ' for job ' + 
                                C.lang.reflect.inspect(dispatch.job) + 
                                ' still wait for responses from targets ' +
                                dispatch.job.nodes.filter(function (node) {
-                                   return !(node in dispatch.result);
+                                   return !(node in dispatch.responses);
                                }));
             return;
         }
@@ -284,9 +618,9 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
         this.logger_.debug('Request ' + message.id + ' for job ' + 
                           C.lang.reflect.inspect(dispatch.job) + 
                           ' complete. Result: ' +
-                          C.lang.reflect.inspect(dispatch.result));
+                          C.lang.reflect.inspect(dispatch.responses));
         
-        dispatch.callback && dispatch.callback(null, dispatch.result);
+        dispatch.callback && dispatch.callback(null, dispatch.responses);
     };
     
     // TODO: stat, tee, cancel
@@ -308,5 +642,39 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
     };
     
     C.namespace('caligula.handlers').OrchestrationHandler = OrchestrationHandler;
+    
+    /**
+     * This type of error is to be thrown when the required job can not be
+     * found.
+     *
+     * @class JobNotFoundError
+     * @constructor
+     * @extends NotFoundError
+     * @param {String} message the error message describe this error
+     */
+    function JobNotFoundError (message) {
+        /* inheritance */
+        this.super(6, message);
+    }
+    C.lang.inherit(JobNotFoundError, C.caligula.errors.NotFoundError);
+
+    C.namespace('caligula.errors').JobNotFoundError = JobNotFoundError;
+    
+    /**
+     * This type of error is to be thrown when the specified job can not be
+     * cancelled according to its current state.
+     *
+     * @class JobNotCancelledError
+     * @constructor
+     * @extends ConflictError
+     * @param {String} message the error message describe this error
+     */
+    function JobNotCancelledError (message) {
+        /* inheritance */
+        this.super(6, message);
+    }
+    C.lang.inherit(JobNotCancelledError, C.caligula.errors.ConflictError);
+
+    C.namespace('caligula.errors').JobNotCancelledError = JobNotCancelledError;
     
 }, '0.0.1', { requires: ['caligula.handlers.base'] });

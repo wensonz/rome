@@ -30,7 +30,7 @@ Condotti.add('caligula.components.package.base', function (C) {
     PackageHandler.prototype.release = function (action) {
         var params = action.data,
             self = this,
-            logger = C.caligula.logging.getStepLogger(this.logger_),
+            logger = C.logging.getStepLogger(this.logger_),
             owner = null;
         
         C.async.waterfall([
@@ -128,7 +128,7 @@ Condotti.add('caligula.components.package.base', function (C) {
      */
     PackageHandler.prototype.fetch = function (action) {
         var params = action.data,
-            logger = C.caligula.logging.getStepLogger(this.logger_);
+            logger = C.logging.getStepLogger(this.logger_);
             
         if (!params.dryrun) {
             action.error(new C.caligula.errors.NotImplementedError(
@@ -198,7 +198,7 @@ Condotti.add('caligula.components.package.base', function (C) {
      */
     PackageHandler.prototype.lock_ = function(action, callback) {
         var params = action.data,
-            logger = C.caligula.logging.getStepLogger(this.logger_);
+            logger = C.logging.getStepLogger(this.logger_);
         
         logger.start('Calling lock.acquire on "package.' + params.name + '"');
         
@@ -234,7 +234,7 @@ Condotti.add('caligula.components.package.base', function (C) {
      */
     PackageHandler.prototype.unlock_ = function(action, id, callback) {
         var params = action.data,
-            logger = C.caligula.logging.getStepLogger(this.logger_);
+            logger = C.logging.getStepLogger(this.logger_);
         
         logger.start('Calling lock.release on "package.' + params.name + '"');
         
@@ -267,7 +267,7 @@ Condotti.add('caligula.components.package.base', function (C) {
      */
     function PackageNotFoundError (message) {
         /* inheritance */
-        this.super(4, message);
+        this.super(5, message);
     }
     C.lang.inherit(PackageNotFoundError, C.caligula.errors.NotFoundError);
     C.namespace('caligula.errors').PackageNotFoundError = PackageNotFoundError;
@@ -288,4 +288,4 @@ Condotti.add('caligula.components.package.base', function (C) {
     C.lang.inherit(PackageAlreadyExistError, C.caligula.errors.ConflictError);
     C.namespace('caligula.errors').PackageAlreadyExistError = PackageAlreadyExistError;
     
-}, '0.0.1', { requires: ['caligula.handlers.base', 'caligula.logging'] });
+}, '0.0.1', { requires: ['caligula.handlers.base'] });

@@ -10,6 +10,22 @@ var condotti = require('condotti'),
     C = null,
     config = null;
 
+/**
+ * The enumerables defined for node state
+ * 
+ * @property NodeState
+ * @type Object
+ */
+var NodeState = {
+    RUNNING: 0,
+    DONE: 10,
+    EXITED: 11,
+    CANCELLED: 12,
+    KILLED: 13,
+    TIMEOUT: 14,
+    FAILED: 20 // Unknown state of the child process
+};
+
 /******************************************************************************
  *                                                                            *
  *                               ORCA CLASS                                   * 
@@ -171,7 +187,7 @@ Orca.prototype.handleTeeCommand_ = function (message) {
         fd = null,
         logger = C.logging.getStepLogger(this.logger_);
     
-    path = C.natives.path.resolve(this.config_.root, message.job, 'output');
+    path = C.natives.path.resolve(this.config_.root, message.job);
     response = {
         id: message.id,
         sender: this.config_.id,
@@ -180,6 +196,22 @@ Orca.prototype.handleTeeCommand_ = function (message) {
     
     C.async.waterfall([
         function (next) {
+            logger.start('Checking if job ' + message.job + 
+                         ' exists under path "' + path + '"');
+            C.natives.fs.exists(path, next);
+        },
+        function (exists, next) {
+            var error = null;
+            
+            logger.done(exists);
+            if (!exists) {
+                error = new JobNotFoundError('Required job ' + message.job + 
+                                             ' can not be found');
+                next(error);
+                return;
+            }
+            
+            path = C.natives.path.resolve(path, 'output');
             logger.start('Checking if the "output" file exists under path ' +
                          path);
             C.natives.fs.exists(path, next);
@@ -190,9 +222,9 @@ Orca.prototype.handleTeeCommand_ = function (message) {
             logger.done(exists);
             
             if (!exists) {
-                error = new Error('OUTPUT for job ' + message.job + 
-                                  ' can not be found');
-                error.code = 404;
+                error = new JobDataNotFoundError('OUTPUT for job ' + 
+                                                 message.job + 
+                                                 ' can not be found');
                 next(error);
                 return;
             }
@@ -216,7 +248,7 @@ Orca.prototype.handleTeeCommand_ = function (message) {
             }
             
             response.error = { 
-                code: error.code || 500, 
+                code: error.code || 50000,
                 message: error.message
             };
             
@@ -235,8 +267,34 @@ Orca.prototype.handleTeeCommand_ = function (message) {
 
 
 /**
- * Handle the "STAT" command
- *
+ * Handle the "STAT" command. The data structure of the stat object is defined
+ * as following:
+ * {
+ *     "stat": 'FAILED',
+ *     "code": ${error code},
+ *     "message": "${error message}"
+ * }
+ * 
+ * or
+ * 
+ * {
+ *     "stat": 'EXITED',
+ *     "code": ${exit code}
+ * }
+ * 
+ * or
+ * 
+ * {
+ *     "stat": 'KILLED',
+ *     "code": ${signal received}
+ * }
+ * 
+ * or
+ * 
+ * {
+ *     "stat": 'TIMEOUT'
+ * }
+ * 
  * @method handleStatCommand_
  * @param {Object} message the "STAT" message to be handled
  */
@@ -246,18 +304,9 @@ Orca.prototype.handleStatCommand_ = function (message) {
         response = null,
         child = null,
         logger = C.logging.getStepLogger(this.logger_),
-        stat = null,
-        states = {
-            RUNNING: 0,
-            DONE: 10,
-            EXITED: 11,
-            CANCELLED: 12,
-            KILLED: 13,
-            TIMEOUT: 14,
-            FAILED: 20 // Unknown state of the child process
-        };
+        stat = null;
         
-    path = C.natives.path.resolve(this.config_.root, message.job, 'stat');
+    path = C.natives.path.resolve(this.config_.root, message.job);
     response = {
         id: message.id,
         sender: this.config_.id,
@@ -266,7 +315,7 @@ Orca.prototype.handleStatCommand_ = function (message) {
     
     child = this.running_[message.job];
     if (child) {
-        response.result = states.RUNNING;
+        response.result = { stat: states.RUNNING };
         this.logger_.debug('STAT: RUNNING, child: ' + child.pid + ', job: ' + 
                            message.job);
         this.dispatch_(message.sender, response);
@@ -275,6 +324,20 @@ Orca.prototype.handleStatCommand_ = function (message) {
     
     C.async.waterfall([
         function (next) {
+            logger.start('Checking if the job ' + message.job + 
+                         ' exists under path ' + path);
+            C.natives.fs.exists(path, next);
+        },
+        function (exists, next) {
+            logger.done(exists);
+            
+            if (!exists) {
+                next(new JobNotFoundError('Job ' + message.job + 
+                                          ' can not be found.'));
+                return;
+            }
+            
+            path = C.natives.path.resolve(path, 'stat');
             logger.start('Checking if the "stat" file exists under path ' +
                          path);
             C.natives.fs.exists(path, next);
@@ -285,10 +348,8 @@ Orca.prototype.handleStatCommand_ = function (message) {
             logger.done(exists);
             
             if (!exists) {
-                error = new Error('STAT for job ' + message.job + 
-                                  ' can not be found');
-                error.code = 404;
-                next(error);
+                next(new JobDataNotFoundError('STAT for job ' + message.job + 
+                                              ' can not be found'));
                 return;
             }
             
@@ -296,36 +357,17 @@ Orca.prototype.handleStatCommand_ = function (message) {
             C.natives.fs.readFile(path, next);
         },
         function (data, next) {
-            var stat = null;
-            
             logger.done(data.toString());
-            
             logger.start('Parsing STAT JSON ' + data.toString() + ' for job ' +
                          message.job);
                          
             try {
-                stat = JSON.parse(data);
+                next(null, JSON.parse(data));
             } catch (e) {
-                e.code = 500;
-                e.message = 'Loading STAT for job ' + message.job + 
-                            ' failed. Detail: ' + e.message;
-                next(e);
-                return;
-            }
-            
-            logger.done();
-            
-            logger.start('Determining the STAT of the job ' + message.job + 
-                         ' based on ' + C.lang.reflect.inspect(stat));
-            
-            if (stat.timeout) {
-                next(states.TIMEOUT);
-            } else if (stat.cancelled) {
-                next(states.CANCELLED);
-            } else if (!stat.signal) {
-                next(states.EXITED);
-            } else {
-                next(states.KILLED);
+                logger.error(e);
+                next(new InternalServerError('Loading STAT for job ' + 
+                                             message.job + 
+                                             ' failed. Detail: ' + e.message));
             }
         }
     ], function (error, stat) {
@@ -334,10 +376,26 @@ Orca.prototype.handleStatCommand_ = function (message) {
                 logger.error(error);
             }
             
-            response.error = { code: error.code || 500, message: error.message};
+            response.error = { 
+                code: error.code || 50000, 
+                message: error.message
+            };
+            
         } else {
             logger.done(stat);
-            response.result = stat;
+            response.result = {};
+            
+            if (stat.timeout) {
+                response.result.stat = states.TIMEOUT;
+            } else if (stat.cancelled) {
+                response.result.stat = states.CANCELLED;
+            } else if (!stat.signal) {
+                response.result.stat = states.EXITED;
+                response.result.code = stat.code;
+            } else {
+                response.result.stat = states.KILLED;
+                response.result.signal = stat.signal;
+            }
         }
         
         self.dispatch_(message.sender, response);
@@ -398,14 +456,18 @@ Orca.prototype.handleCancelCommand_ = function (message) {
     logger.start('Checking if the "stat" file exists under "' + path + '"');
     C.natives.fs.exists(C.natives.path.resolve(path, 'stat'), 
                         function (exists) {
+        var error = null;
         logger.done(exists);
         if (exists) {
             response.result = {};
         } else {
+            error = new JobNotFoundError('Child process for job ' + 
+                                         message.job + 
+                                         ' can not be found, or it\'s not ' +
+                                         'managed by this orca.');
             response.error = { 
-                code: 404, 
-                message: 'Child process for job ' + message.job + 
-                         ' can not be found, or it\'s not managed by this orca'
+                code: error.code, 
+                message: error.message
             };
         }
         self.dispatch_(message.sender, response);
@@ -420,15 +482,18 @@ Orca.prototype.handleCancelCommand_ = function (message) {
  * @param {Object} message the message to be handled
  */
 Orca.prototype.handleUnsupportedCommand_ = function (message) {
-    var response = null;
+    var response = null,
+        error = null;
     
+    error = new UnsupportedCommandTypeError('Unsupported command "' + 
+                                            message.command + '" found.');
     response = {
         id: message.id,
         sender: this.config_.id,
         job: message.job,
         error: {
-            code: 415, // unsupported media type
-            message: 'Unsupported command "' + message.command + '" found.'
+            code: error.code,
+            message: error.message
         }
     };
     
@@ -475,9 +540,9 @@ Orca.prototype.handleExecCommand_ = function (message) {
             }
             
             // TODO: add customized error type
-            error = new Error('Job ' + message.job + ' is being executed');
-            error.code = 409;
-            self.logger_.error('Job ' + message.job + ' is being executed');
+            error = new JobAlreadyExecutedError('Job ' + message.job + 
+                                                ' has been executed');
+            self.logger_.error(error);
             next(error);
         },
         function (made, next) { // spawn the child process to execute the job
@@ -493,8 +558,9 @@ Orca.prototype.handleExecCommand_ = function (message) {
                 );
             } catch (e) {
                 logger.error(e);
-                e.code = 500;
-                next(new Error('Creating stdout/err output file failed.'));
+                next(new InternalServerError(
+                    'Creating stdout/err output file failed.'
+                ));
                 return;
             }
             
@@ -509,8 +575,7 @@ Orca.prototype.handleExecCommand_ = function (message) {
                 );
             } catch (e) {
                 logger.error(e);
-                e.code = 400;
-                next(e);
+                next(new InvalidArgumentError(e.toString()));
                 return;
             }
             
@@ -568,7 +633,7 @@ Orca.prototype.handleExecCommand_ = function (message) {
             }
             
             response.error = {
-                code: error.code || 500,
+                code: error.code || 50000,
                 message: error.message
             };
         } else {
@@ -628,7 +693,110 @@ Orca.prototype.dispatch_ = function (target, message) {
 };
 
 
+/******************************************************************************
+ *                                                                            *
+ *                                  ERRORS                                    * 
+ *                                                                            *
+ *****************************************************************************/
 
+
+/**
+ * This type of error is desgiend to be thrown when the job required to be
+ * executed has already been executed
+ * 
+ * @class JobAlreadyExecutedError
+ * @constructor
+ * @extends Error
+ * @param {String} message the error message
+ */
+function JobAlreadyExecutedError (message) {
+    this.name = 'JobAlreadyExecutedError';
+    this.message = message;
+    this.code = 40905;
+}
+C.lang.inherit(JobAlreadyExecutedError, Error);
+
+
+/**
+ * This type of error is desgiend to be thrown when the required job can not be
+ * found.
+ * 
+ * @class JobNotFoundError
+ * @constructor
+ * @extends Error
+ * @param {String} message the error message
+ */
+function JobNotFoundError (message) {
+    this.name = 'JobNotFoundError';
+    this.message = message;
+    this.code = 40406;
+}
+C.lang.inherit(JobNotFoundError, Error);
+
+
+/**
+ * This type of error is desgiend to be thrown when the required data, such as
+ * the output or the stat, for the specified job can not be found.
+ * 
+ * @class JobDataNotFoundError
+ * @constructor
+ * @extends Error
+ * @param {String} message the error message
+ */
+function JobDataNotFoundError (message) {
+    this.name = 'JobDataNotFoundError';
+    this.message = message;
+    this.code = 40407;
+}
+C.lang.inherit(JobDataNotFoundError, Error);
+
+/**
+ * This type of error is desgiend to be thrown when some internal server related
+ * error occurs.
+ * 
+ * @class InternalServerError
+ * @constructor
+ * @extends Error
+ * @param {String} message the error message
+ */
+function InternalServerError (message) {
+    this.name = 'InternalServerError';
+    this.message = message;
+    this.code = 50000;
+}
+C.lang.inherit(InternalServerError, Error);
+
+/**
+ * This type of error is desgiend to be thrown when some of the provided
+ * arguments is invalid
+ * 
+ * @class InvalidArgumentError
+ * @constructor
+ * @extends Error
+ * @param {String} message the error message
+ */
+function InvalidArgumentError (message) {
+    this.name = 'InvalidArgumentError';
+    this.message = message;
+    this.code = 40001;
+}
+C.lang.inherit(InvalidArgumentError, Error);
+
+/**
+ * This type of error is desgiend to be thrown when the required command is not
+ * supported
+ * 
+ * @class UnsupportedCommandTypeError
+ * @constructor
+ * @extends Error
+ * @param {String} message the error message
+ */
+function UnsupportedCommandTypeError (message) {
+    this.name = 'UnsupportedCommandTypeError';
+    this.message = message;
+    this.code = 41501;
+}
+C.lang.inherit(UnsupportedCommandTypeError, Error);
 
 /******************************************************************************
  *                                                                            *

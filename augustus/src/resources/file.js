@@ -60,7 +60,7 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
                                                         context, directory, 
                                                         callback) {
         var self = this,
-            logger = C.caligula.logging.getStepLogger(this.logger_),
+            logger = C.logging.getStepLogger(this.logger_),
             params = action.data;
 
         C.async.waterfall([

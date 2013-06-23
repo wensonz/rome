@@ -5,6 +5,59 @@
  * @module caligula.errors.http
  */
 Condotti.add('caligula.errors.http', function (C) {
+    /**
+     * ERROR CODE TABLE
+     *
+     * - BAD REQUEST = 400
+     *   - BadRequestError = 40000
+     *   - InvalidArgumentError = 40001
+     *   - 
+     * - INTERNAL SERVER ERROR = 500
+     *   - InternalServerError = 50000
+     *   - 
+     *
+     * - NOT FOUND = 404
+     *   - NotFoundError = 40400
+     *   - ActionHandlerNotFoundError = 40401
+     *   - ActionHandlerNotCallableError = 40402
+     *   - GroupNotFoundError = 40403
+     *   - FileNotFoundError = 40404
+     *   - PackageNotFoundError = 40405
+     *   - JobNotFoundError = 40406
+     *   - JobDataNotFoundError = 40407
+     *
+     * - CONFLICT = 409
+     *   - ConflictError = 40900
+     *   - OperationConflictError = 40901
+     *   - GroupAlreadyExistError = 40902
+     *   - FileAlreadyExistError = 40903
+     *   - PackageAlreadyExistError = 40904
+     *   - JobAlreadyExecutedError = 40905
+     *   - JobNotCancelledError = 40906
+     *
+     * - GONE = 410
+     *   - GoneError = 41000
+     *   - GroupGoneError = 41001
+     *
+     * - REQUESTED RANGE NOT SATISFIABLE = 416
+     *   - RequestedRangeNotSatisfiableError = 41600
+     *   - ResourceNotEnoughError = 41601
+     *
+     * - NOT IMPLEMENTED = 501
+     *   - NotImplementedError = 50100
+     *   -
+     *
+     * - PRECONDITION FAILED = 412
+     *   - PreconditionFailedError = 41200
+     *   - UploadedFileCorruptedError = 41201
+     *
+     * - REQUEST TIMEOUT = 408
+     *   - RequestTimeoutError = 40800
+     *
+     * - UNSUPPORTED MEDIA TYPE = 415
+     *   - UnsupportedTypeError = 41500
+     *   - UnsupportedCommandTypeError = 41501
+     */
     
     /**
      * This HttpError class is the abstract base class of all HTTP errors
@@ -296,5 +349,44 @@ Condotti.add('caligula.errors.http', function (C) {
     C.lang.inherit(PreconditionFailedError, HttpError);
     C.namespace('caligula.errors').PreconditionFailedError = PreconditionFailedError;
     
+    /**
+     * Request Timeout.
+     *
+     * @class RequestTimeoutError
+     * @constructor
+     * @extends HttpError
+     * @param {Number} code the detailed error code
+     * @param {String} message the error message
+     */
+    function RequestTimeoutError(code, message) {
+        if (String === C.lang.reflect.getObjectType(code)) {
+            message = code;
+            code = 0;
+        }
+        /* inheritance */
+        this.super(408, 40800 + code, message);
+    }
+    C.lang.inherit(RequestTimeoutError, HttpError);
+    C.namespace('caligula.errors').RequestTimeoutError = RequestTimeoutError;
+    
+    /**
+     * Found Redirection.
+     *
+     * @class FoundRedirection
+     * @constructor
+     * @extends HttpError
+     * @param {Number} code the detailed error code
+     * @param {String} message the error message
+     */
+    function FoundRedirection(code, message) {
+        if (String === C.lang.reflect.getObjectType(code)) {
+            message = code;
+            code = 0;
+        }
+        /* inheritance */
+        this.super(302, 30200 + code, message);
+    }
+    C.lang.inherit(FoundRedirection, HttpError);
+    C.namespace('caligula.errors').FoundRedirection = FoundRedirection;
     
 }, '0.0.1', { requires: [] });

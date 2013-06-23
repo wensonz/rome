@@ -140,7 +140,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
             dependencies = null,
             names = null,
             merged = null,
-            logger = C.caligula.logging.getStepLogger(this.logger_),
+            logger = C.logging.getStepLogger(this.logger_),
             id = null, // the id for this generation, which is also used as part
                        // of the directory to save the generated files
             directory = null; // the directory contains the generated files
@@ -394,7 +394,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
         C.async.forEach(Object.keys(resources), function (name, next) {
             var resource = null,
                 processor = null,
-                logger = C.caligula.logging.getStepLogger(self.logger_);
+                logger = C.logging.getStepLogger(self.logger_);
             
             resource = resources[name];
             logger.start('Processing resource ' + name + ' ' + 
@@ -442,7 +442,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
         C.async.forEach(configurations, function(configuration, next) {
             var filters = null,
                 first = true,
-                logger = C.caligula.logging.getStepLogger(self.logger_);
+                logger = C.logging.getStepLogger(self.logger_);
             
             filters = configuration.filters ? configuration.filters.before: [];
             
@@ -489,4 +489,4 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
     
     C.namespace('caligula.handlers.configuration').GenerationHandler = GenerationHandler;
 
-}, '0.0.1', { requires: ['caligula.handlers.base', 'caligula.logging'] });
+}, '0.0.1', { requires: ['caligula.handlers.base'] });

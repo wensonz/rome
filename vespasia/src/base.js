@@ -60,7 +60,7 @@ Condotti.add('caligula.components.file.base', function (C) {
     FileHandler.prototype.upload = function (action) {
         var params = action.data,
             self = this,
-            logger = C.caligula.logging.getStepLogger(this.logger_),
+            logger = C.logging.getStepLogger(this.logger_),
             file = null,
             owner = null;
 
@@ -184,7 +184,7 @@ Condotti.add('caligula.components.file.base', function (C) {
      */
     FileHandler.prototype.download = function (action) {
         var params = action.data,
-            logger = C.caligula.logging.getStepLogger(this.logger_),
+            logger = C.logging.getStepLogger(this.logger_),
             file = null;
         
         if (!params.dryrun) { // temparory check
@@ -256,7 +256,7 @@ Condotti.add('caligula.components.file.base', function (C) {
      */
     FileHandler.prototype.lock_ = function(action, callback) {
         var params = action.data,
-            logger = C.caligula.logging.getStepLogger(this.logger_);
+            logger = C.logging.getStepLogger(this.logger_);
         
         logger.start('Calling lock.acquire on "file.' + params.name + '"');
         
@@ -292,7 +292,7 @@ Condotti.add('caligula.components.file.base', function (C) {
      */
     FileHandler.prototype.unlock_ = function(action, id, callback) {
         var params = action.data,
-            logger = C.caligula.logging.getStepLogger(this.logger_);
+            logger = C.logging.getStepLogger(this.logger_);
         
         logger.start('Calling lock.release on "file.' + params.name + '"');
         
@@ -325,7 +325,7 @@ Condotti.add('caligula.components.file.base', function (C) {
      */
     function FileNotFoundError (message) {
         /* inheritance */
-        this.super(3, message);
+        this.super(4, message);
     }
     C.lang.inherit(FileNotFoundError, C.caligula.errors.NotFoundError);
     C.namespace('caligula.errors').FileNotFoundError = FileNotFoundError;
@@ -364,4 +364,4 @@ Condotti.add('caligula.components.file.base', function (C) {
     C.lang.inherit(FileAlreadyExistError, C.caligula.errors.ConflictError);
     C.namespace('caligula.errors').FileAlreadyExistError = FileAlreadyExistError;
 
-}, '0.0.1', { requires: ['caligula.handlers.base', 'caligula.logging'] });
+}, '0.0.1', { requires: ['caligula.handlers.base'] });

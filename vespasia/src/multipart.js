@@ -128,4 +128,4 @@ Condotti.add('caligula.components.file.multipart', function (C) {
     
     C.namespace('caligula.middleware.connect').multipart = multipart;
     
-}, '0.0.1', { requires: ['caligula.logging'] });
+}, '0.0.1', { requires: [] });
