@@ -7,7 +7,7 @@
 Condotti.add('caligula.components.publishing.group', function (C) {
     
     var GroupState = {
-        RUNNING: 0
+        RUNNING: 0,
         DONE: 1,
         FAILED: 2
     };
@@ -262,7 +262,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 
                 next(null, status);
             }
-        ], function (error, result) {
+        ], function (error, status) {
             if (error) {
                 if (error instanceof C.caligula.errors.FoundRedirection) {
                     status = log.status;
