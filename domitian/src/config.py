@@ -3,7 +3,7 @@ port = 8080
 id = '10.210.213.51'
 tarballs = {
     'remote': 'configuration',
-    'local': '/data1/rome/configuration/tarballs'
+    'local': '/data1/rome/configuration'
 }
 salt = {
     'root': '/data1/rome/salt',

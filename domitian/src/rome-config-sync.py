@@ -43,7 +43,7 @@ def getUrl ():
         sys.exit(1)
     
     index = random.randint(0, len(addresses) - 1)
-    return 'http://%s:%n/' % (addresses[index], port)
+    return 'http://%s:%d/' % (addresses[index], port)
     
 
 def updateConfiguration (url, tag):
