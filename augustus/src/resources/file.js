@@ -107,8 +107,8 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
                     resource.source_hash = 'md5=' + result.md5;
                 }
                 
-                managed = Object.keys(clone).map(function (key) {
-                    return [key, clone[key]];
+                managed = Object.keys(resource).map(function (key) {
+                    return [key, resource[key]];
                 });
                 managed.push(['makedirs', 'True']);
                 
