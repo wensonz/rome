@@ -294,6 +294,7 @@ Condotti.add('caligula.components.file.base', function (C) {
         var params = action.data,
             logger = C.logging.getStepLogger(this.logger_);
         
+        callback = callback || function () {};
         logger.start('Calling lock.release on "file.' + params.name + '"');
         
         action.data = { name: 'file.' + params.name, owner: id };

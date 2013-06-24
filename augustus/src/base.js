@@ -118,7 +118,8 @@ Condotti.add('caligula.components.configuration.base', function (C) {
         var params = action.data,
             self = this,
             message = null;
-
+            
+        callback = callback || function () {};
         message = 'Calling lock.release on \'configuration\'';
         this.logger_.debug(message + ' ...');
 

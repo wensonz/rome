@@ -861,6 +861,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         
         logger.start('Calling lock.release on "' + name + '"');
         
+        callback = callback || function () {};
+        
         action.data = { name: name, owner: id };
         action.acquire('lock.release', function (error) {
             action.data = params;

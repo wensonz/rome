@@ -236,6 +236,7 @@ Condotti.add('caligula.components.package.base', function (C) {
         var params = action.data,
             logger = C.logging.getStepLogger(this.logger_);
         
+        callback = callback || function () {};
         logger.start('Calling lock.release on "package.' + params.name + '"');
         
         action.data = { name: 'package.' + params.name, owner: id };
