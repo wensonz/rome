@@ -306,7 +306,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             function (next) { // Lock the operation log 
                 logger.start('Acquiring the operation lock for group ' +
                              params.name);
-                self.lock_(action, next);
+                self.lock_(action, 'publishing.group.' + params.name, next);
             },
             function (result, next) { // Query the current status
                 logger.done(result);
@@ -425,7 +425,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             if (owner) {
                 self.logger_.debug('Release the pre-acquired operation lock ' +
                                    'for group ' + params.name + ' ...');
-                self.unlock_(action, owner, cleanup);
+                self.unlock_(action, 'publishing.group.' + params.name, owner, 
+                             cleanup);
                 return;
             }
             
@@ -456,14 +457,16 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             },
             function (result, next) { // Lock the backend
                 logger.done(result);
-                locks.group = result;
+                locks['publishing.group.' + params.name] = result;
+                // locks.group = result;
 
                 logger.start('Acquiring the lock on the backend servers');
                 self.lock_(action, 'publishing.backend', next);
             },
             function (result, next) { // Check if group already exist
                 logger.done(result);
-                locks.backend = result;
+                locks['publishing.backend'] = result;
+                // locks.backend = result;
 
                 logger.start('Seaching the existing groups for name ' + 
                              params.name);
@@ -616,7 +619,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 self.logger_.debug('The pre-acquired ' + name + ' lock ' +
                                    'for group ' + params.name + 
                                    ' are to be released');
-                self.unlock_(action, locks[name], next);
+                self.unlock_(action, name, locks[name], next);
             }, function () {
                 if (error) {
                     logger.error(error);
@@ -690,7 +693,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             function (next) { // Lock the operation log 
                 logger.start('Acquiring the operation lock for group ' +
                              params.name);
-                self.lock_(action, next);
+                self.lock_(action, 'publish.group.' + params.name, next);
             },
             function (result, next) { // Query the current status
                 logger.done(result);
@@ -793,7 +796,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             if (owner) {
                 self.logger_.debug('Release the pre-acquired operation lock ' +
                                    'for group ' + params.name + ' ...');
-                self.unlock_(action, owner, cleanup);
+                self.unlock_(action, 'publishing.group.' + params.name, owner, 
+                             cleanup);
                 return;
             }
             
