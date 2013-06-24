@@ -506,11 +506,11 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.start('Reading all backend servers belong to ISP ' +
                              params.isp);
                 
-                action.data = { criteria: { 
-                    includes: [
+                action.data = { criteria: {
+                    includes: { '$all': [
                         'property.weibo.master-site.variants',
                         'isp.' + params.isp
-                    ],
+                    ]},
                     type: 'node'
                 }, fields: { name: 1 } };
 
