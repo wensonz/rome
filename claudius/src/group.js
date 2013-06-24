@@ -398,7 +398,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                              params.name);
                 action.data = {
                     nodes: group.backends,
-                    command: '/usr/local/sinasrv2/sbin/rome-configure-client',
+                    command: '/usr/local/sinasrv2/sbin/rome-config-sync',
                     arguments: [tag],
                     timeout: 120 * 1000, // 120 sec
                     extras: {

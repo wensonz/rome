@@ -7,5 +7,8 @@ Condotti.add('caligula.components.configuration.resources.all', function (C) {
     //
 }, '0.0.1', { requires: [
     'caligula.components.configuration.resources.base',
-    'caligula.components.configuration.resources.file'
+    'caligula.components.configuration.resources.file',
+    'caligula.components.configuration.resources.template',
+    'caligula.components.configuration.resources.package',
+    'caligula.components.configuration.resources.service'
 ]});
