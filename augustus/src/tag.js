@@ -110,7 +110,9 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                               // TAG
                 message = 'Reading the revision number for TAG ' + params.tag;
                 self.logger_.debug(message + ' ...');
-                action.data = { name: params.tag };
+                action.data = { 
+                    criteria: { name: params.tag }
+                };
                 action.acquire('data.configuration.tag.read', next);
             },
             function (result, unused, next) { // reading the configuration collections
