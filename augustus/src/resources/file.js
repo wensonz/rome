@@ -64,20 +64,10 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
             params = action.data;
 
         C.async.waterfall([
-            function (next) { // Create the directory
-                var mkdirp = C.require('mkdirp');
-                directory = C.natives.path.resolve(directory, name);
-                
-                logger.start('Creating the directory ' + directory + 
-                             ' to keep the generated configuration file');
-                mkdirp(directory, next);
-            },
-            function (made, next) { // Read the file object if resource.source 
-                                    // starts with "file://"
+            function (next) { // Read the file object if resource.source 
+                              // starts with "file://"
                 var protocol = 'file://',
                     parsed = null;
-                
-                logger.done();
                 
                 parsed = resource.source.substring(0, protocol.length);
                 if (protocol !== parsed) {
@@ -98,47 +88,43 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
             },
             function (result, unused, next) {
                 var salt = {},
-                    clone = null,
+                    backup = {},
                     managed = [],
                     path = null;
                 
-                clone = C.lang.clone(resource);
+                
+                backup.path = resource.path;
+                backup.type = resource.type;
+                
+                delete resource.path;
+                delete resource.type;
                 
                 if (result) {
                     logger.done(result);
                     
-                    clone.source = result.url;
-                    clone.source_hash = 'md5=' + result.md5;
+                    backup.source = resource.source;
+                    resource.source = result.url;
+                    resource.source_hash = 'md5=' + result.md5;
                 }
-                
-                
-                
-                delete clone.path;
-                delete clone.type;
                 
                 managed = Object.keys(clone).map(function (key) {
                     return [key, clone[key]];
                 });
                 managed.push(['makedirs', 'True']);
                 
-                salt[resource.path] = { 'file.managed': managed };
+                salt[backup.path] = { 'file.managed': managed };
                 
-                path = C.natives.path.resolve(directory, 'init.sls');
+                resource.source = backup.source || resource.source;
+                resource.path = backup.path;
+                resource.type = backup.type;
+                
+                path = C.natives.path.resolve(directory, name + '.sls');
                 logger.start('Saving configuration ' + 
                              C.lang.reflect.inspect(salt) +
                              ' into file ' + path);
                 
                 C.natives.fs.writeFile(path, JSON.stringify(salt, null, 4), 
-                                       function (error) {
-                    if (error) {
-                        // TODO: refactor the message?
-                        next(new C.caligula.errors.InternalServerError(
-                            error.message
-                        ));
-                        return;
-                    }
-                    next();
-                });
+                                       next);
             }
         ], function (error) {
             action.data = params;

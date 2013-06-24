@@ -266,7 +266,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                 mkdirp(directory, next);
             },
             function (made, next) {
-                logger.done();
+                logger.done(made);
                 // Process resources in the merged configuration
                 logger.start('Processing the merged resources ' +
                              C.lang.reflect.inspect(merged.resources) + 
@@ -275,15 +275,43 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                              
                 action.data = params;
                 self.processResources_(action, merged, directory, next);
+            },
+            function (result, next) {
+                var salt = null;
+                
+                salt = { base: {
+                    '*': Object.keys(merged.resources);
+                }};
+                
+                logger_.start('Saving the generated content ' +
+                              C.lang.reflect.inspect(salt) + ' into ' +
+                              directory + '/top.sls');
+                               
+                C.natives.fs.writeFile(
+                    C.natives.path.resolve(directory, 'top.sls'),
+                    JSON.stringify(salt, null, 4),
+                    next
+                );
+            },
+            function (result, next) {
+                var tgz = C.require('tar.gz'),
+                    compressed = null;
+                
+                logger.done(result);
+                compressed = C.natives.path.resolve(self.root_, id + '.tar.gz');
+                logger.start('Compressing directory "' + directory + 
+                             '" to "' + compressed + '"');
+                new tgz().compress(directory, compressed, next);
             }
-        ], function (error, result) {
+        ], function (error) {
             if (error) {
                 logger.error(error);
                 action.error(error);
                 return;
             }
-            logger.done(result);
-            action.done(result);
+            
+            logger.done();
+            action.done(id);
         });
     };
     
@@ -389,9 +417,12 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
         var self = this,
             resources = data.resources,
             context = data.context,
-            results = {};
+            results = {},
+            names = null;
             
-        C.async.forEach(Object.keys(resources), function (name, next) {
+        names = Object.keys(resources);
+        
+        C.async.forEach(names, function (name, next) {
             var resource = null,
                 processor = null,
                 logger = C.logging.getStepLogger(self.logger_);
