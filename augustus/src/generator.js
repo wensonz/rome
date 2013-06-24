@@ -293,7 +293,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                     next
                 );
             },
-            function (result, next) {
+            function (next) {
                 var tgz = C.require('tar.gz'),
                     compressed = null;
                 
