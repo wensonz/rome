@@ -422,7 +422,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
             
         names = Object.keys(resources);
         
-        C.async.forEach(names, function (name, next) {
+        C.async.forEachSeries(names, function (name, next) {
             var resource = null,
                 processor = null,
                 logger = C.logging.getStepLogger(self.logger_);
