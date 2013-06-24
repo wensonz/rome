@@ -33,8 +33,8 @@ OPTIONS
 '''
 
 def getUrl ():
-    host = 'host' in config and config['host'] or 'api.rome.cluster.sina.com.cn'
-    port = 'port' in config and config['port'] or 8080
+    host = hasattr(config, 'host') and config.host or 'api.rome.cluster.sina.com.cn'
+    port = hasattr(config, 'port') and config.port or 8080
     try:
         addresses = socket.gethostbyname_ex(host)[2]
     except:
@@ -48,7 +48,7 @@ def getUrl ():
 
 def updateConfiguration (url, tag):
     try:
-        body = json.dumps({ 'tag': tag, 'node': config['id'] });
+        body = json.dumps({ 'tag': tag, 'node': config.id });
         request = urllib2.Request(url + 'configuration/generate', body, {
             'Content-Type': 'application/json',
             'Content-Length': str(len(body))
@@ -73,8 +73,8 @@ def updateConfiguration (url, tag):
     
     # Get the generated configuration tar ball on the server
     try:
-        remote = config['tarballs']['remote'] + '/' + name + '.tar.gz'
-        local = config['tarballs']['local'] + '/' + name + '.tar.gz'
+        remote = config.tarballs['remote'] + '/' + name + '.tar.gz'
+        local = config.tarballs['local'] + '/' + name + '.tar.gz'
         
         urllib.urlretrieve(url + remote, local)
     except:
@@ -85,20 +85,20 @@ def updateConfiguration (url, tag):
     # Extract the downloaded tarball
     try:
         targz = tarfile.open(local)
-        targz.extractall(config['tarballs']['local'])
+        targz.extractall(config.tarballs['local'])
         targz.close()
     except:
         print '>>> Extracting downloaded configuration tarball %s failed.' % (local)
         traceback.print_exc()
         sys.exit(1)
     
-    directory = config['tarballs']['local'] + '/' + name
+    directory = config.tarballs['local'] + '/' + name
     # Update the link of salt to this new dir
     try:
-        os.chdir(config['salt']['root'])
-        os.symlink(directory, config['salt']['config'])
+        os.chdir(config.salt['root'])
+        os.symlink(directory, config.salt['config'])
     except:
-        print '>>> Linking the salt config root %s to %s failed. Traceback: ' % (config['salt']['config'], directory)
+        print '>>> Linking the salt config root %s to %s failed. Traceback: ' % (config.salt['config'], directory)
         traceback.print_exc()
         sys.exit(1)
     
