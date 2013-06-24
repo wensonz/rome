@@ -297,7 +297,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                 var tgz = C.require('tar.gz'),
                     compressed = null;
                 
-                logger.done(result);
+                logger.done();
                 compressed = C.natives.path.resolve(self.root_, id + '.tar.gz');
                 logger.start('Compressing directory "' + directory + 
                              '" to "' + compressed + '"');
