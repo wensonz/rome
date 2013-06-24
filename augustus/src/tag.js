@@ -141,12 +141,12 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 
                 action.data = {
                     criteria: params.criteria,
-                    fields: { oid: '_id', revision: 1, name: 1 },
+                    fields: { cid: 1, revision: 1, name: 1 },
                     operations: { sort: { revision: -1 }},
                     by: 'name',
                     aggregation: {
                         revision: { '$first': 'revision' },
-                        oid: { '$first': 'oid' }
+                        cid: { '$first': 'cid' }
                     }
                 };
                 // TODO: configuration handler provides this feature?
@@ -163,11 +163,11 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                     return;
                 }
                 
-                ids = result.data.map(function (item) { return item.oid; });
+                ids = result.data.map(function (item) { return item.cid; });
                 message = 'Reading configuration objects whose id is in ' +
                           ids.toString();
                 self.logger_.debug(message + ' ...');
-                action.data = { criteria: { '_id': { '$in': ids }}};
+                action.data = { criteria: { cid: { '$in': ids }}};
                 action.acquire('data.configuration.read', next);
             },
             function (result, unused, next) { // reading the history collections
@@ -185,12 +185,12 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                 // since the original action.data has been modified
                 action.data = {
                     criteria: params.criteria,
-                    fields: { oid: '_id', revision: 1, name: 1 },
+                    fields: { cid: 1, revision: 1, name: 1 },
                     operations: { sort: { revision: -1 }},
                     by: 'name',
                     aggregation: {
                         revision: { '$first': 'revision' },
-                        oid: { '$first': 'oid' }
+                        cid: { '$first': 'cid' }
                     }
                 };
                 
@@ -213,11 +213,11 @@ Condotti.add('caligula.components.configuration.tag', function (C) {
                     return;
                 }
                 
-                ids = result.data.map(function (item) { return item.oid; });
+                ids = result.data.map(function (item) { return item.cid; });
                 message = 'Reading history configuration objects whose id is' +
                           ' in ' + ids.toString();
                 self.logger_.debug(message + ' ...');
-                action.data = { criteria: { '_id': { '$in': ids }}};
+                action.data = { criteria: { cid: { '$in': ids }}};
                 action.acquire('data.configuration-history.read', next);           
             },
             function (result, unused, next) {

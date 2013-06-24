@@ -161,11 +161,11 @@ Condotti.add('caligula.components.configuration.base', function (C) {
         }
         
         action.data = {
-            fields: { oid: '_id', name: 1, revision: 1, deleted: '__deleted__' },
+            fields: { cid: 1, name: 1, revision: 1, deleted: '__deleted__' },
             operations: { sort: { revision: 1 } },
             by: 'name',
             aggregation: { 
-                oid: { '$first': 'oid' }, 
+                cid: { '$first': 'cid' }, 
                 revision: { '$first': 'revision'},
                 deleted: { '$first': 'deleted' }
             }
@@ -195,8 +195,8 @@ Condotti.add('caligula.components.configuration.base', function (C) {
                 return !item.deleted && (!names || names[item._id]);
             }).map(function (item) {
                 return names ? { // name list specified
-                    _id: item.oid, name: item._id, revision: item.revision
-                } : item.oid; // otherwise only oid is returned
+                    cid: item.cid, name: item._id, revision: item.revision
+                } : item.cid; // otherwise only oid is returned
             });
             
             callback(null, ids);
@@ -266,8 +266,12 @@ Condotti.add('caligula.components.configuration.base', function (C) {
             function (result, next) {
                 self.logger_.debug(message + ' succeed. Revision: ' + result);
                 revision = result;
-                
-                params.forEach(function (param) { param.revision = revision; });
+                // Update revision and assign a global unique "cid", which is
+                // used to replace the "_id" for query simplicity
+                params.forEach(function (param) { 
+                    param.revision = revision;
+                    param.cid = C.uuid.v4();
+                });
                 action.data = params;
                 
                 message = 'Creating configuration(s)' +
@@ -489,11 +493,11 @@ Condotti.add('caligula.components.configuration.base', function (C) {
                 
                 if (params.criteria) {
                     params.criteria =  { '$and': [ 
-                        {'_id': { '$in': ids }},
+                        { cid: { '$in': ids }},
                         params.criteria
                     ]};
                 } else {
-                    params.criteria = { '_id': { '$in': ids }};
+                    params.criteria = { cid: { '$in': ids }};
                 }
                 action.data = params;
                 
@@ -556,11 +560,11 @@ Condotti.add('caligula.components.configuration.base', function (C) {
                 
                 if (params.criteria) {
                     params.criteria =  { '$and': [ 
-                        {'_id': { '$in': ids }},
+                        { cid: { '$in': ids }},
                         params.criteria
                     ]};
                 } else {
-                    params.criteria = { '_id': { '$in': ids }};
+                    params.criteria = { cid: { '$in': ids }};
                 }
                 
                 params.update = { '$set': { '__deleted__': true }};
@@ -631,7 +635,7 @@ Condotti.add('caligula.components.configuration.base', function (C) {
                 message = 'Reading the old or deleted configurations';
                 self.logger_.debug(message + ' ...');
                 
-                action.data = { criteria: { _id: { '$nin': ids }}};
+                action.data = { criteria: { cid: { '$nin': ids }}};
                 action.acquire('data.configuration.read', next);
             },
             function (result, meta, next) { // add those old or deleted configuration into history
@@ -648,7 +652,7 @@ Condotti.add('caligula.components.configuration.base', function (C) {
                 message = 'Removing the historic configurations whose id is' +
                           ' not in ' + ids.toString();
                 self.logger_.debug(message + ' ...');
-                action.data = { criteria: { _id: { '$nin': ids}}};
+                action.data = { criteria: { cid: { '$nin': ids}}};
                 action.acquire('data.configuration.delete', next);
             },
             function (result, meta, next) { // query history
