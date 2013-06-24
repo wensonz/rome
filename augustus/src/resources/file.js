@@ -15,7 +15,7 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
      *     'type': 'file', // indicate this resource is a file resource
      *     'path': '/etc/http.conf', // the path where the file is to be located
      *                               // on the target servers
-     *     'owner': 'nobody',
+     *     'user': 'nobody',
      *     'group': 'nobody',
      *     'mode': '0755',
      *     'source': 'file://http.conf.default'

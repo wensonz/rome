@@ -194,9 +194,9 @@ Condotti.add('caligula.components.configuration.base', function (C) {
             ids = result.data.filter(function(item) {
                 return !item.deleted && (!names || names[item._id]);
             }).map(function (item) {
-                return names? { 
+                return names ? { // name list specified
                     _id: item.oid, name: item._id, revision: item.revision
-                } : item.oid;
+                } : item.oid; // otherwise only oid is returned
             });
             
             callback(null, ids);
@@ -351,17 +351,22 @@ Condotti.add('caligula.components.configuration.base', function (C) {
             },
             function (result, next) { // verify the configurations to be updated
                                       // exist in the database
-                var missed = null;
+                var missed = null,
+                    existing = {};
                 self.logger_.debug(message + ' succeed. Result: ' +
                                    C.lang.reflect.inspect(result));
                 
                 message = 'Verifying the configuration(s) exist now';
                 self.logger_.debug(message + ' ...');
                 
-                missed = result.filter(function (item) {
-                    return item.name in names;
-                }).map(function (item) {
-                    return item.name;
+                result.forEach(function (item) {
+                    return existing[item.name] = true;
+                });
+                
+                missed = params.filter(function (param) {
+                    return !param.name in existing;
+                }).map(function (param) {
+                    return param.name;
                 });
                 
                 if (missed.length) {

@@ -118,15 +118,9 @@ class HookedSaltCall(salt.cli.SaltCall):
 
 def deployConfiguration ():
     
-    sys.argv = ['salt-call', '--local', 'state.highstate']
-    try:
-        client = HookedSaltCall()
-        client.run()
-    except:
-        print '>>> Syncing the configuration with salt-call failed. Traceback: '
-        traceback.print_exc()
-        sys.exit(1)
-    
+    sys.argv = ['salt-call', '--local', '--no-color', '--out=json', 'state.highstate']
+    client = HookedSaltCall()
+    client.run()
 
 def main ():
     tag = None
