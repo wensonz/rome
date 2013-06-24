@@ -108,9 +108,11 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
                 }
                 
                 managed = Object.keys(resource).map(function (key) {
-                    return [key, resource[key]];
+                    var item = {};
+                    item[key] = resource[key];
+                    return item;
                 });
-                managed.push(['makedirs', 'True']);
+                managed.push({'makedirs': true});
                 
                 salt[backup.path] = { 'file.managed': managed };
                 
