@@ -877,7 +877,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         });
     };
     
-    C.namespace('caligula.handlers').GroupHandler = GroupHandler;
+    C.namespace('caligula.handlers.publishing').GroupHandler = GroupHandler;
 
 
 
