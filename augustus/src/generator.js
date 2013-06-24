@@ -283,7 +283,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                     '*': Object.keys(merged.resources)
                 }};
                 
-                logger_.start('Saving the generated content ' +
+                logger.start('Saving the generated content ' +
                               C.lang.reflect.inspect(salt) + ' into ' +
                               directory + '/top.sls');
                                
