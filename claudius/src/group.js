@@ -577,7 +577,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 //       so the scale are divided by 5, which means all
                 //       resources of one ISP are to be allocated if user
                 //       specifies the scale to be 5
-                required = nodes.length * params.scale / 5;
+                required = Math.ceil(nodes.length * params.scale / 5);
                 if (available.length < required) {
                     next(new C.caligula.errors.ResourceNotEnoughError(
                         'Required scale ' + params.scale + '% for group ' +
