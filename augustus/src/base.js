@@ -424,9 +424,10 @@ Condotti.add('caligula.components.configuration.base', function (C) {
             function (result, next) {
                 self.logger_.debug(message + ' succeed. Revision: ' + result);
                 revision = result;
-                
+                // Create new configuration objects with new cid
                 params.forEach(function(param) {
                     param.revision = revision;
+                    param.cid = C.uuid.v4();
                 });
                 
                 message = 'Updating configuration(s) ' +
