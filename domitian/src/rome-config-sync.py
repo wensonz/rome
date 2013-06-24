@@ -118,7 +118,7 @@ class HookedSaltCall(salt.cli.SaltCall):
 
 def deployConfiguration ():
     
-    sys.argv = ['salt-call', '--local', 'highstate']
+    sys.argv = ['salt-call', '--local', 'state.highstate']
     try:
         client = HookedSaltCall()
         client.run()
