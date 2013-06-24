@@ -280,7 +280,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                 var salt = null;
                 
                 salt = { base: {
-                    '*': Object.keys(merged.resources);
+                    '*': Object.keys(merged.resources)
                 }};
                 
                 logger_.start('Saving the generated content ' +
