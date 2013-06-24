@@ -103,7 +103,7 @@ Condotti.add('caligula.components.configuration.resources.package', function (C)
         });
     };
     
-    C.namespace('caligula.configuration.resources').TemplateResourceProcessor = TemplateResourceProcessor;
+    C.namespace('caligula.configuration.resources').PackageResourceProcessor = PackageResourceProcessor;
     
     
 }, '0.0.1', { requires: [ 'caligula.components.configuration.resources.base' ] });
