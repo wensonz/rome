@@ -1,4 +1,4 @@
-#!/usr/bin/env python26
+#!/usr/bin/env python
 
 import sys
 import os
@@ -96,6 +96,7 @@ def updateConfiguration (url, tag):
     # Update the link of salt to this new dir
     try:
         os.chdir(config.salt['root'])
+        os.unlink(config.salt['config'])
         os.symlink(directory, config.salt['config'])
     except:
         print '>>> Linking the salt config root %s to %s failed. Traceback: ' % (config.salt['config'], directory)
@@ -103,12 +104,23 @@ def updateConfiguration (url, tag):
         sys.exit(1)
     
 
+class HookedSaltCall(salt.cli.SaltCall):
+    
+    def run(self):
+        self.parse_args()
+        self.config['retcode_passthrough'] = True
+        
+        self.parse_args_ = self.parse_args
+        self.parse_args = lambda : None
+        
+        super(HookedSaltCall, self).run()
+        
+
 def deployConfiguration ():
     
     sys.argv = ['salt-call', '--local', 'highstate']
     try:
-        client = salt.cli.SaltCall()
-        client.config['retcode_passthrough'] = True
+        client = HookedSaltCall()
         client.run()
     except:
         print '>>> Syncing the configuration with salt-call failed. Traceback: '
