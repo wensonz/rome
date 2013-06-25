@@ -51,7 +51,7 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
     LoadBalancerPrefilter.prototype.execute = function (action, configuration, 
                                                         configurations, callback) {
         var params = action.data,
-            self = this
+            self = this,
             logger = C.logging.getStepLogger(this.logger_),
             isp = null,
             node = null,
