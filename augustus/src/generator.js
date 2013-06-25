@@ -458,35 +458,35 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
      * 
      * @method prefilterConfigurations_
      * @param {Action} action the generation action used to acquire other action
-     * @param {Array} configurations the list of configuration whose filters are
-     *                               to be executed
+     * @param {Array} names the list of the name of the configurations whose 
+     *                      pre-filters are to be executed
+     * @param {Object} configurations the configuration collection
      * @param {Function} callback the callback function to be invoked when the
      *                            filters are executed successfully, or some
      *                            error occurs. The signature of the callback is
      *                            'function (error) {}'
      */
     GenerationHandler.prototype.prefilterConfigurations_ = function (
-        action, configurations, callback) {
+        action, names, configurations, callback) {
         
         var self = this;
         
-        C.async.forEach(configurations, function(configuration, next) {
+        C.async.forEach(names, function(name, next) {
             var filters = null,
-                first = true,
-                logger = C.logging.getStepLogger(self.logger_);
+                logger = C.logging.getStepLogger(self.logger_),
+                configuration = configurations[name],
+                message = null;
+            
             
             filters = configuration.filters ? configuration.filters.before: [];
-            
-            self.logger_.debug('Filtering configuration ' + configuration.name +
-                               ' with filters: ' +
-                               C.lang.reflect.inspect(filters) + ' ...');
+            message = 'Filtering configuration ' + configuration.name +
+                      ' with filters: ' + C.lang.reflect.inspect(filters);
+            self.logger_.debug(message + ' ...');
                                
             C.async.forEachSeries(filters, function (filter, next) {
                 
-                if (!first) {
-                    logger.done();
-                }
-                first = false;
+                
+                logger.done();
                 logger.start('Executing filter ' + filter + 
                              ' for configuration ' + configuration.name);
                 
@@ -494,24 +494,18 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                 filter = self.factory_.get(self.filters_ + '.' + filter);
                 // TODO: check filter
                 //       
-                filter.execute(action, configuration, next);
+                filter.execute(action, configuration, configurations, next);
                 
             }, function (error) {
                 if (error) {
                     logger.error(error);
-                    self.logger_.debug('Filtering configuration ' + 
-                                       configuration.name + ' with filters: ' +
-                                       C.lang.reflect.inspect(filters) +
-                                       ' failed.');
+                    self.logger_.debug(message + ' failed.');
                     next(error);
                     return;
                 }
                 
                 logger.done();
-                self.logger_.debug('Filtering configuration ' + 
-                                   configuration.name + ' with filters: ' +
-                                   C.lang.reflect.inspect(filters) + 
-                                   ' succeed.');
+                self.logger_.debug(message + ' succeed.');
                 next();
             });
             

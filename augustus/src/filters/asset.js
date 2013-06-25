@@ -13,9 +13,8 @@ Condotti.add('caligula.components.configuration.filters.asset', function (C) {
      * @class AssetPrefilter
      * @constructor
      * @extends Filter
-     * @params {Object} config the config object for this filter
      */
-    function AssetPrefilter (config) {
+    function AssetPrefilter () {
         /* inheritance */
         this.super();
         
@@ -32,18 +31,20 @@ Condotti.add('caligula.components.configuration.filters.asset', function (C) {
      *                        executed
      * @param {Object} configuration the configuration which this filter belongs
      *                               to
+     * @param {Object} configurations the configuration collection
      * @param {Function} callback the callback function to be invoked after the
      *                            configuration data has been successfully
      *                            filtered, or some error occurs. The signature
      *                            of this callback is 'function (error) {}'
      */
-    AssetPrefilter.prototype.execute = function (action, configuration, callback) {
+    AssetPrefilter.prototype.execute = function (action, configuration, 
+                                                 configurations, callback) {
         var params = action.data,
             self = this,
             message = null;
             
         action.data = {
-            criteria: { name: configuration.name }
+            criteria: { name: action.data.node }
         };
         message = 'Reading asset inventory for node ' + configuration.name;
         this.logger_.debug(message + ' ...');

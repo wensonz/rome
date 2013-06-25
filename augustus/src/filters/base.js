@@ -33,12 +33,14 @@ Condotti.add('caligula.components.configuration.filters.base', function (C) {
      *                        executed
      * @param {Object} configuration the configuration object which requires
      *                               this filter to be executed on it
+     * @param {Object} configurations the configuration collection
      * @param {Function} callback the callback function to be invoked after the
      *                            configuration data has been successfully
      *                            filtered, or some error occurs. The signature
      *                            of this callback is 'function (error) {}'
      */
-    Prefilter.prototype.execute = function (action, configuration, callback) {
+    Prefilter.prototype.execute = function (action, configuration, 
+                                            configurations, callback) {
         callback(new C.errors.NotImplementedError('This execute method is not' +
                                                   ' implemented in this class' +
                                                   ', and is expected to be ' +

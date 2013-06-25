@@ -25,6 +25,7 @@ Condotti.add('caligula.errors.http', function (C) {
      *   - PackageNotFoundError = 40405
      *   - JobNotFoundError = 40406
      *   - JobDataNotFoundError = 40407
+     *   - LoadBalancerIspNotFoundError = 40408
      *
      * - CONFLICT = 409
      *   - ConflictError = 40900
@@ -57,6 +58,7 @@ Condotti.add('caligula.errors.http', function (C) {
      * - UNSUPPORTED MEDIA TYPE = 415
      *   - UnsupportedTypeError = 41500
      *   - UnsupportedCommandTypeError = 41501
+     *   - UnsupportedStrategyTypeError = 41502
      */
     
     /**
