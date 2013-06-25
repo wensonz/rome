@@ -85,6 +85,15 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
          */
         this.dispatching_ = {};
         
+        /**
+         * The uptime to filter out expired messages from Kafka
+         * WTF!!
+         * 
+         * @property uptime_
+         * @type Number
+         */
+        this.uptime_ = Date.now();
+        
         /* initialize */
         this.initialize_();
     }
@@ -174,6 +183,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                     id: C.uuid.v4(),
                     sender: self.config_.id,
                     job: job.id,
+                    timestamp: Date.now(),
                     command: 'STAT'
                 };
                 self.dispatch_(job.nodes, message, next);
@@ -283,6 +293,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                     id: C.uuid.v4(),
                     sender: self.config_.id,
                     job: job.id,
+                    timestamp: Date.now(),
                     command: 'TEE'
                 };
                 self.dispatch_(job.nodes, message, next);
@@ -366,7 +377,6 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                 logger.done(result);
                 
                 // TODO: check if result.affected === 1
-                
                 logger.start('Sending "CANCEL" commands to nodes ' +
                              job.nodes.toString() + ' for job ' + job.id);
                 
@@ -374,7 +384,8 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                     id: C.uuid.v4(),
                     sender: self.config_.id,
                     job: job.id,
-                    command: 'CANCEL'
+                    command: 'CANCEL',
+                    timestamp: Date.now()
                 };
                 
                 self.dispatch_(job.nodes, message);
@@ -434,6 +445,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                     sender: self.config_.id,
                     job: job.id,
                     command: 'EXEC',
+                    timestamp: Date.now(),
                     params: {
                         command: job.command,
                         arguments: job.arguments,
@@ -588,9 +600,15 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
             return;
         }
         
+        if (message.timestamp <= self.uptime_) {
+            this.logger_.debug('Discard expired message received: ' +
+                               C.lang.reflect.inspect(message));
+            return;
+        }
+        
         this.logger_.debug('Message received: ' + 
                            C.lang.reflect.inspect(message));
-                           
+        
         dispatch = this.dispatching_[message.id];
         if (!dispatch) {
             this.logger_.warn('Response from ' + message.sender + 

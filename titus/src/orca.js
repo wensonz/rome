@@ -75,6 +75,15 @@ function Orca (config) {
      */
     this.kafka_ = null;
     
+    /**
+     * The uptime of this client in order to filter out the expired message 
+     * received when started up
+     * 
+     * @property uptime_
+     * @type Number
+     */
+    this.uptime_ = Date.now();
+    
     /* initialize */
     this.initialize_();
 
@@ -152,6 +161,12 @@ Orca.prototype.onKafkaConsumerData_ = function (data) {
         return;
     }
     
+    if (message.timestamp <= this.uptime_) {
+        this.logger_.debug('Discard expired message received: ' +
+                           C.lang.reflect.inspect(message));
+        return;
+    }
+    
     this.logger_.debug('Message received: ' + C.lang.reflect.inspect(message));
     
     switch (message.command) {
@@ -191,7 +206,8 @@ Orca.prototype.handleTeeCommand_ = function (message) {
     response = {
         id: message.id,
         sender: this.config_.id,
-        job: message.job
+        job: message.job,
+        timestamp: Date.now()
     };
     
     C.async.waterfall([
@@ -310,7 +326,8 @@ Orca.prototype.handleStatCommand_ = function (message) {
     response = {
         id: message.id,
         sender: this.config_.id,
-        job: message.job
+        job: message.job,
+        timestamp: Date.now()
     };
     
     child = this.running_[message.job];
@@ -421,7 +438,8 @@ Orca.prototype.handleCancelCommand_ = function (message) {
     response = {
         id: message.id,
         sender: this.config_.id,
-        job: message.job
+        job: message.job,
+        timestamp: Date.now()
     };
     
     child = this.running_[message.job];
@@ -491,6 +509,7 @@ Orca.prototype.handleUnsupportedCommand_ = function (message) {
         id: message.id,
         sender: this.config_.id,
         job: message.job,
+        timestamp: Date.now(),
         error: {
             code: error.code,
             message: error.message
@@ -520,7 +539,8 @@ Orca.prototype.handleExecCommand_ = function (message) {
     response = {
         id: message.id,
         sender: this.config_.id,
-        job: message.job
+        job: message.job,
+        timestamp: Date.now()
     };
     
     C.async.waterfall([
