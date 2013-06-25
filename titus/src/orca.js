@@ -270,7 +270,7 @@ Orca.prototype.handleTeeCommand_ = function (message) {
  * Handle the "STAT" command. The data structure of the stat object is defined
  * as following:
  * {
- *     "stat": 'FAILED',
+ *     "state": 'FAILED',
  *     "code": ${error code},
  *     "message": "${error message}"
  * }
@@ -278,21 +278,21 @@ Orca.prototype.handleTeeCommand_ = function (message) {
  * or
  * 
  * {
- *     "stat": 'EXITED',
+ *     "state": 'EXITED',
  *     "code": ${exit code}
  * }
  * 
  * or
  * 
  * {
- *     "stat": 'KILLED',
+ *     "state": 'KILLED',
  *     "code": ${signal received}
  * }
  * 
  * or
  * 
  * {
- *     "stat": 'TIMEOUT'
+ *     "state": 'TIMEOUT'
  * }
  * 
  * @method handleStatCommand_
@@ -315,7 +315,7 @@ Orca.prototype.handleStatCommand_ = function (message) {
     
     child = this.running_[message.job];
     if (child) {
-        response.result = { stat: states.RUNNING };
+        response.result = { state: states.RUNNING };
         this.logger_.debug('STAT: RUNNING, child: ' + child.pid + ', job: ' + 
                            message.job);
         this.dispatch_(message.sender, response);
@@ -386,14 +386,14 @@ Orca.prototype.handleStatCommand_ = function (message) {
             response.result = {};
             
             if (stat.timeout) {
-                response.result.stat = states.TIMEOUT;
+                response.result.state = states.TIMEOUT;
             } else if (stat.cancelled) {
-                response.result.stat = states.CANCELLED;
+                response.result.state = states.CANCELLED;
             } else if (!stat.signal) {
-                response.result.stat = states.EXITED;
+                response.result.state = states.EXITED;
                 response.result.code = stat.code;
             } else {
-                response.result.stat = states.KILLED;
+                response.result.state = states.KILLED;
                 response.result.signal = stat.signal;
             }
         }

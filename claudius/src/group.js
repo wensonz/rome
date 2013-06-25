@@ -396,7 +396,9 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                              'backends ' + group.backends.toString() + 
                              ' of group ' + params.name);
                              
-                self.updateGroupBackendsConfiguration_(action, group, log, tag, next);
+                self.updateGroupBackendsConfiguration_(action, group, 
+                                                       group.backends, log, tag, 
+                                                       next);
             }
         ], function (error, result) {
             self.unlockGroupAndBackends_(action, locks, function () {
@@ -520,34 +522,212 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             self = this,
             locks = null,
             group = null,
+            log = null,
+            tag = null,
+            difference = null,
             logger = C.logging.getStepLogger(this.logger_);
         
         C.async.waterfall([
             function (next) { // Lock the group and backends
-                logger.start('Acquiring the lock on on group ' + params.name);
-                self.lock_(action, 'publishing.group.' + params.name, next);
-            },
-            function (result, next) { // Lock the backend
-                logger.done(result);
-                locks.group = result;
-
-                logger.start('Acquiring the lock on the backend servers');
-                self.lock_(action, 'publishing.backend', next);
+                logger.start('Acquiring the lock on on group ' + params.name +
+                             ' and backends for resource allocation');
+                self.lockGroupAndBackends_(action, params.name, true, next);
             },
             function (result, next) { // Read current status of the group
                 logger.done(result);
-                locks.backend = result;
+                locks = result;
                 
-                logger.start('Querying the current status of the group ' +
-                             params.name);
-                action.data = { name: params.name };
+                logger.start('Querying current status of group ' + params.name);
+                action.data = {
+                    name: params.name,
+                    internal: true
+                };
                 action.acquire(action.name.replace(/scale$/, 'status'), next);
             },
-            function (status, next) { // Calculate the scale
-                //
+            function (status, unused, next) { // allocate the backend servers
+                logger.done(status);
+                logger.start('Checking if the group ' + params.name + 
+                             ' is available for scaling');
+
+                if (status.state === GroupState.RUNNING) {
+                    next(new C.caligula.errors.OperationConflictError(
+                        'Another "' + status.operator + '" operation is now ' +
+                        'running on the specified group ' + params.name
+                    ));
+                    return;
+                }
+
+                // Group was tried to be deleted, but failed. If the deleting
+                // operation succeeds, "status" API will return a 
+                // GroupNotFoundError, which will cause the flow ended
+                if (status.operator === 'delete') {
+                    next(new C.caligula.errors.GroupGoneError(
+                        'Required group ' + params.name + 
+                        ' has been or is gonna be deleted'
+                    ));
+                    return;
+                }
+
+                logger.done();
+                group = status.group;
+                difference = group.scale - params.scale;
+
+                self.logger_.debug('Current scale of the group ' + params.name +
+                                   ' is ' + group.scale + ', the difference ' +
+                                   'between it and the new scale ' + 
+                                   params.scale + ' is ' + difference);
+                
+                if (difference === 0) {
+                    next(new C.caligula.errors.FoundRedirection());
+                    return;
+                }
+                
+                if (difference < 0) {
+                    next(null, null);
+                    return;
+                }
+                
+                logger.start('Trying to allocate backend servers of ISP ' +
+                             group.isp + ' by scale ' + difference);
+                
+                self.allocateBackends_(action, group.isp, difference, next);
+            },
+            function (result, next) { // create operation log
+                var count = 0;
+                
+                if (result) {
+                    logger.done(result);
+                    // params.backends === allocated backends after scaling
+                    params.backends = group.backends.concat(result);
+                }
+                
+                if (difference < 0) {
+                    logger.start('Deallocating backend servers ' + 
+                                 group.backends.toString() + ' of group ' + 
+                                 group.name + ' from scale ' + group.scale + 
+                                 ' to ' + params.scale);
+                                 
+                    count = Math.ceil(
+                        group.backends.length * params.scale / group.scale
+                    );
+                    
+                    params.backends = group.backends.slice(0, count);
+                    logger.done(params.backends);
+                }
+                
+                logger.start('Creating scaling operation log for group ' + 
+                             params.name);
+                log = {
+                    id: C.uuid.v4(),
+                    group: group,
+                    operator: 'scale',
+                    params: params,
+                    timestamp: Date.now()
+                };
+
+                action.data = log;
+                action.acquire('data.publishing.group.operation.create', next);
+            },
+            function (result, unused, next) { // update the group
+                logger.done(result);
+                
+                action.data = {
+                    criteria: { name: params.name },
+                    update: { '$set': {
+                        scale: params.scale
+                        backends: params.backends
+                    }}
+                };
+                logger.start('Updating the scale for group ' + params.name +
+                             ' to ' + params.scale);
+                action.acquire('data.publishing.group.update', next);
+            },
+            function (result, unused, next) {
+                logger.done(result);
+                
+                tag = 'TAG_GROUP_' + params.name.toUpperCase() + '_SCALE@' +
+                      Date.now().toString();
+                
+                logger.start('Tagging the new configuration for group ' +
+                             params.name + ' with tag ' + tag);
+                             
+                action.data = { name: tag };
+                action.acquire('configuration.tag.create', next);
+            },
+            function (result, unused, next) { // Creat orchestration job
+                logger.done(result);
+                
+                if (difference < 0) {
+                    self.logger_('Scaling group ' + group.name + 
+                                 ' in for scale ' + params.scale + 
+                                 ', no backend configuration updates needed');
+                    next(null, null);
+                    return;
+                }
+                
+                logger.start('Sending notification to update the package on ' +
+                             'new allocated backends ' + 
+                             params.backends.toString() + ' of group ' + 
+                             params.name);
+                             
+                self.updateGroupBackendsConfiguration_(
+                    action, group, params.backends, log, tag, next, 
+                    function (state) {
+                        var failed = state.nodes.some(function (node) {
+                            var result = node.result;
+                            return !(result && 
+                                     result.state === NodeState.EXITED && 
+                                     result.code === 0);
+                        });
+                        if (failed) {
+                            self.logger_.error('Updating package on new ' +
+                                               'allocated backends ' +
+                                               params.backends.toString() +
+                                               ' for group ' + params.name +
+                                               ' failed. Status: ' + state);
+                            return;
+                        }
+                        
+                        logger.start('Sending notification to update the ' +
+                                     'loadbalancers affected by group ' +
+                                     params.name + ' of ISP ' + group.isp);
+                         
+                        self.updateLoadBalancerConfiguration_(action, group, 
+                                                              log, tag);
+                    }
+                );
+            },
+            function (result, next) {
+                
+                if (result) {
+                    next(null, result);
+                    return;
+                }
+                
+                logger.start('Sending notification to update the ' +
+                             'loadbalancers affected by group ' +
+                             params.name + ' of ISP ' + group.isp);
+                         
+                self.updateLoadBalancerConfiguration_(action, group, log, 
+                                                      tag, next);
             }
         ], function (error, result) {
-            //
+            if (error) {
+                if (error instanceof C.caligula.errors.FoundRedirection) {
+                    self.logger_.debug('No change happened to the group ' +
+                                       group.name + ' due to the same scale ' +
+                                       params.scale + ' specified.');
+                                      
+                    action.done(group.params);
+                    return;
+                }
+                logger.error(error);
+                action.error(error);
+                return;
+            }
+            
+            logger.done(result);
+            action.done(params.backends);
         });
     };
     
@@ -974,16 +1154,24 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      * @param {Action} action the action trigger this update
      * @param {Object} group the group configurations for whose backends are
      *                       to be updated
+     * @param {Array} backends the backend server list whose configuration are
+     *                         to be updated
      * @param {Object} log the operation log object
      * @param {String} tag the tag name to be used for configuration generation
-     * @param {Function} callback the callback function to be invoked after the
-     *                            notification of updating the configuration of
-     *                            the backend servers of the specified group has
-     *                            been successfully sent, or some error occurs.
+     * @param {Function} created the callback function to be invoked after the
+     *                           notification of updating the configuration of
+     *                           the backend servers of the specified group has
+     *                           been successfully sent, or some error occurs.
+     *                           The signature of the callback function is
+     *                           'function (error, result) {}'
+     * @param {Function} done the callback function to be invoked after the
+     *                            orchestration job for updating the backend
+     *                            servers of the specified group has
+     *                            been completed.
      *                            The signature of the callback function is
-     *                            'function (error) {}'
+     *                            'function (state) {}'
      */
-    GroupHandler.prototype.updateGroupBackendsConfiguration_ = function (action, group, log, tag, callback) {
+    GroupHandler.prototype.updateGroupBackendsConfiguration_ = function (action, group, backends, log, tag, created, done) {
         var self = this,
             logger = C.logging.getStepLogger(this.logger_);
         
@@ -1005,14 +1193,34 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             }
         };
         action.acquire('orchestration.create', function (error, result) {
+            var timer = null,
+                id = null;
+            
             if (error) {
                 logger.error(error);
-                callback(error);
+                created(error);
                 return;
             }
             
             logger.done(result);
-            callback();
+            created(null, result);
+            
+            if (!done) { // no done callback specified
+                return;
+            }
+            
+            id = result.id;
+            timer = setInterval(function () {
+                action.data = { id: id };
+                action.acquire('orchestration.stat', function (error, state) {
+                    if (error || state.job === JobState.RUNNING) {
+                        return;
+                    }
+                    
+                    clearInterval(timer);
+                    done(state);
+                });
+            }, 5000); // every 5 sec
         });
     };
     
@@ -1038,6 +1246,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         var self = this,
             logger = C.logging.getStepLogger(this.logger_);
             
+        callback = callback || function () {};
+        
         C.async.waterfall([
             function (next) { // Read load balancers belong to the ISP of the
                               // group
