@@ -466,33 +466,55 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 self.lockGroupAndBackends_(action, params.name, true, next);
                 // self.lock_(action, 'publishing.group.' + params.name, next);
             },
-            function (result, next) { // Check if group already exist
+            function (result, next) { // Read current status of the group
+                var name = null;
+                
                 logger.done(result);
-                // locks['publishing.backend'] = result;
-                // locks.backend = result;
                 locks = result;
                 
-                logger.start('Seaching the existing groups for name ' + 
-                             params.name);
+                logger.start('Querying current status of group ' + params.name);
+                action.data = {
+                    name: params.name,
+                    internal: true
+                };
                 
-                action.data = { criteria: { name: params.name }};
-                action.acquire('data.publishing.group.read', next);
+                name = action.name.replace(/create$/, 'status');
+                action.acquire(name, function (error, result) {
+                    if (error && error instanceof GroupNotFoundError) {
+                        self.logger_.debug('Group ' + params.name + 
+                                           ' did not exist before.');
+                        next(null, null, null);
+                        return;
+                    }
+                    next(error, result, null);
+                });
             },
-            function (result, unused, next) { // Read all groups belong to the
-                                              // specified ISP
-                logger.done(result);
-
-                logger.start('Ensuring the group ' + params.name + 
-                             ' does not exist');
-                if (result.affected > 0) {
-                    next(new C.caligula.errors.GroupAlreadyExistError(
-                        'Group ' + params.name + ' already exists.'
+            function (status, unused, next) { // allocate the backend servers
+                logger.done(status);
+                
+                logger.start('Checking if the group ' + params.name + 
+                             ' is available for creating');
+                             
+                if (status.state === GroupState.RUNNING) {
+                    next(new C.caligula.errors.OperationConflictError(
+                        'Another "' + status.operator + '" operation is now ' +
+                        'running on the specified group ' + params.name
                     ));
                     return;
                 }
 
-                logger.done();
+                // Group was tried to be deleted, but failed. If the deleting
+                // operation succeeds, "status" API will return a 
+                // GroupNotFoundError, which will cause the flow ended
+                if (status.operator !== 'delete') {
+                    next(new C.caligula.errors.GroupAlreadyExistError(
+                        'Required group ' + params.name + 
+                        ' has already existed'
+                    ));
+                    return;
+                }
                 
+                logger.done();
                 logger.start('Trying to allocate backend servers of ISP ' +
                              params.isp + ' at scale ' + params.scale);
                 
