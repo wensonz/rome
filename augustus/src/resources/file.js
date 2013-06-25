@@ -74,7 +74,7 @@ Condotti.add('caligula.components.configuration.resources.file', function (C) {
                     self.logger_.debug('Parsed protocol from source ' + 
                                         resource.source + ' is "' + parsed +
                                         '", but not "file://"');
-                    next(null, null);
+                    next(null, null, null);
                     return;
                 }
 

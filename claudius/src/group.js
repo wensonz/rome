@@ -390,15 +390,44 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 action.acquire('configuration.tag.create', next);
             },
             function (result, unused, next) { // Creat orchestration job
+                var updateLoadBalancer = null;
+                
                 logger.done(result);
-
+                
+                if (!group.package) { // the first time group is published
+                    updateLoadBalancer = function (state) {
+                        var failed = state.nodes.some(function (node) {
+                            var result = node.result;
+                            return !(result && 
+                                     result.state === NodeState.EXITED && 
+                                     result.code === 0);
+                        });
+                        if (failed) {
+                            self.logger_.error('Updating package on new ' +
+                                               'allocated backends ' +
+                                               group.backends.toString() +
+                                               ' for group ' + params.name +
+                                               ' failed. Status: ' + state);
+                            return;
+                        }
+                        
+                        logger.start('Sending notification to update the ' +
+                                     'loadbalancers affected by group ' +
+                                     params.name + ' of ISP ' + group.isp);
+                         
+                        self.updateLoadBalancerConfiguration_(action, group, 
+                                                              log, tag);
+                    };
+                }
+                
                 logger.start('Sending notification to update the package on ' +
                              'backends ' + group.backends.toString() + 
                              ' of group ' + params.name);
                              
-                self.updateGroupBackendsConfiguration_(action, group, 
-                                                       group.backends, log, tag, 
-                                                       next);
+                self.updateGroupBackendsConfiguration_(
+                    action, group, group.backends, log, tag, next, 
+                    updateLoadBalancer
+                );
             }
         ], function (error, result) {
             self.unlockGroupAndBackends_(action, locks, function () {
@@ -634,7 +663,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 action.data = {
                     criteria: { name: params.name },
                     update: { '$set': {
-                        scale: params.scale
+                        scale: params.scale,
                         backends: params.backends
                     }}
                 };
@@ -712,23 +741,326 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                                                       tag, next);
             }
         ], function (error, result) {
-            if (error) {
-                if (error instanceof C.caligula.errors.FoundRedirection) {
-                    self.logger_.debug('No change happened to the group ' +
-                                       group.name + ' due to the same scale ' +
-                                       params.scale + ' specified.');
+            self.unlockGroupAndBackends_(action, locks, function () {
+                if (error) {
+                    if (error instanceof C.caligula.errors.FoundRedirection) {
+                        self.logger_.debug('No change happened to the group ' +
+                                           group.name + 
+                                           ' due to the same scale ' +
+                                           params.scale + ' specified.');
                                       
-                    action.done(group.params);
+                        action.done(group.params);
+                        return;
+                    }
+                    logger.error(error);
+                    action.error(error);
                     return;
                 }
+            
+                logger.done(result);
+                action.done(params.backends);
+            });
+        });
+    };
+    
+    /**
+     * Apply a new strategy to the specified group
+     *
+     * @method apply
+     * @param {Action} action the application action to be handled
+     */
+    GroupHandler.prototype.apply = function (action) {
+        var params = action.data,
+            self = this,
+            locks = null,
+            group = null,
+            log = null,
+            tag = null,
+            logger = C.logging.getStepLogger(this.logger_);
+        
+        C.async.waterfall([
+            function (next) { // Lock the group and backends
+                logger.start('Acquiring the lock on on group ' + params.name);
+                self.lockGroupAndBackends_(action, params.name, false, next);
+            },
+            function (result, next) { // Read current status of the group
+                logger.done(result);
+                locks = result;
+                
+                logger.start('Querying current status of group ' + params.name);
+                action.data = {
+                    name: params.name,
+                    internal: true
+                };
+                action.acquire(action.name.replace(/apply$/, 'status'), next);
+            },
+            function (status, unused, next) { // create operation log
+                logger.done(status);
+                logger.start('Checking if the group ' + params.name + 
+                             ' is available for applying new strategy');
+                             
+                if (status.state === GroupState.RUNNING) {
+                    next(new C.caligula.errors.OperationConflictError(
+                        'Another "' + status.operator + '" operation is now ' +
+                        'running on the specified group ' + params.name
+                    ));
+                    return;
+                }
+                
+                // Group was tried to be deleted, but failed. If the deleting
+                // operation succeeds, "status" API will return a 
+                // GroupNotFoundError, which will cause the flow ended
+                if (status.operator === 'delete') {
+                    next(new C.caligula.errors.GroupGoneError(
+                        'Required group ' + params.name + 
+                        ' has been or is gonna be deleted'
+                    ));
+                    return;
+                }
+                
+                logger.done();
+                group = status.group;
+                
+                action.data = {
+                    id: C.uuid.v4(),
+                    operator: 'apply',
+                    params: params,
+                    timestamp: Date.now(),
+                    group: group
+                };
+                logger.start('Creating the operation log for applying new ' +
+                             'strategy ' + 
+                             C.lang.reflect.inspect(params.strategy) + 
+                             ' to group ' + params.name);
+                action.acquire('data.publishing.group.operation.create', next);
+            },
+            function (result, unused, next) {
+                logger.done(result);
+                
+                logger.start('Update the strategy of group ' + params.name +
+                             ' from ' + C.lang.reflect.inspect(group.strategy) +
+                             ' to ' + C.lang.reflect.inspect(params.strategy));
+                             
+                action.data = {
+                    criteria: { name: params.name },
+                    update: { '$set': {
+                        strategy: params.strategy
+                    }}
+                };
+                action.acquire('data.publishing.group.update', next);
+            },
+            function (result, unused, next) { // Create configuration TAG
+                logger.done(result);
+                
+                tag = 'TAG_GROUP_' + params.name.toUpperCase() + 
+                      '_APPLY@' + Date.now().toString();
+                
+                logger.start('Tagging the new configuration for group ' +
+                             params.name + ' with tag ' + tag);
+                
+                action.data = { name: tag };
+                action.acquire('configuration.tag.create', next);
+            },
+            function (result, unused, next) { // Creat orchestration job
+                logger.done(result);
+                
+                logger.start('Sending notification to loadbalancers to apply' +
+                             ' the new strategy ' + 
+                             C.lang.reflect.inspect(params.strategy) + 
+                             ' on group ' + params.name);
+                
+                self.updateLoadBalancerConfiguration_(action, group, log, tag, 
+                                                      next);
+            }
+        ], function (error, result) {
+            self.unlockGroupAndBackends_(action, locks, function () {
+                if (error) {
+                    logger.error(error);
+                    action.error(error);
+                    return;
+                }
+            
+                logger.done(result);
+                action.done();
+            });
+        });
+    };
+    
+    /**
+     * Delete the specified group
+     *
+     * @method delete
+     * @param {Action} action the deleting action to be handled
+     */
+    GroupHandler.prototype.delete = function (action) {
+        var params = action.data,
+            self = this,
+            locks = null,
+            group = null,
+            log = null,
+            tag = null,
+            logger = C.logging.getStepLogger(this.logger_);
+        
+        C.async.waterfall([
+            function (next) { // Lock the group and backends
+                logger.start('Acquiring the lock on on group ' + params.name);
+                self.lockGroupAndBackends_(action, params.name, false, next);
+            },
+            function (result, next) { // Read current status of the group
+                logger.done(result);
+                locks = result;
+                
+                logger.start('Querying current status of group ' + params.name);
+                action.data = {
+                    name: params.name,
+                    internal: true
+                };
+                action.acquire(action.name.replace(/apply$/, 'status'), next);
+            },
+            function (status, unused, next) { // create operation log
+                logger.done(status);
+                logger.start('Checking if the group ' + params.name + 
+                             ' is available for deleting');
+                             
+                if (status.state === GroupState.RUNNING) {
+                    next(new C.caligula.errors.OperationConflictError(
+                        'Another "' + status.operator + '" operation is now ' +
+                        'running on the specified group ' + params.name
+                    ));
+                    return;
+                }
+                
+                // Group was tried to be deleted, but failed. If the deleting
+                // operation succeeds, "status" API will return a 
+                // GroupNotFoundError, which will cause the flow ended
+                /*
+                if (status.operator === 'delete') {
+                    next(new C.caligula.errors.GroupGoneError(
+                        'Required group ' + params.name + 
+                        ' has been or is gonna be deleted'
+                    ));
+                    return;
+                }
+                */
+                
+                logger.done();
+                group = status.group;
+                
+                action.data = {
+                    id: C.uuid.v4(),
+                    operator: 'delete',
+                    params: params,
+                    timestamp: Date.now(),
+                    group: group
+                };
+                logger.start('Creating the operation log for deleting  group ' + 
+                             params.name);
+                action.acquire('data.publishing.group.operation.create', next);
+            },
+            function (result, unused, next) {
+                logger.done(result);
+                
+                logger.start('Deleting group ' + params.name);
+                action.data = {
+                    criteria: { name: params.name }
+                };
+                action.acquire('data.publishing.group.delete', next);
+            },
+            function (result, unused, next) { // Create configuration TAG
+                logger.done(result);
+                
+                tag = 'TAG_GROUP_' + params.name.toUpperCase() + 
+                      '_DELETE@' + Date.now().toString();
+                
+                logger.start('Tagging the new configuration for group ' +
+                             params.name + ' with tag ' + tag);
+                
+                action.data = { name: tag };
+                action.acquire('configuration.tag.create', next);
+            },
+            function (result, unused, next) { // Creat orchestration job
+                logger.done(result);
+                
+                logger.start('Sending notification to loadbalancers to remove' +
+                             ' the group ' + params.name);
+                             
+                self.updateLoadBalancerConfiguration_(action, group, log, tag, 
+                                                      next);
+            }
+        ], function (error, result) {
+            self.unlockGroupAndBackends_(action, locks, function () {
+                if (error) {
+                    logger.error(error);
+                    action.error(error);
+                    return;
+                }
+            
+                logger.done(result);
+                action.done();
+            });
+        });
+    };
+    
+    /**
+     * Rollback the current package to the most recent succesefully deployed
+     * one
+     *
+     * @method rollback
+     * @param {Action} action the rollback action to be handled
+     */
+    GroupHandler.prototype.rollback = function (action) {
+        var params = action.data,
+            self = this,
+            locks = null,
+            group = null,
+            log = null,
+            tag = null,
+            logger = C.logging.getStepLogger(this.logger_);
+        
+        logger.start('Querying the operation log for the most recent ' +
+                     'successful publishing');
+         
+        action.data = {
+            criteria: {
+                'params.name': params.name,
+                'operator': 'publish'
+                'status': {
+                    '$exists': true,
+                    'state': GroupState.OK
+                }
+            },
+            fields: {
+                params: 1
+            },
+            operations: {
+                sort: { timestamp: -1 },
+                limit: 1
+            }
+        };
+        
+        action.acquire('data.publish.group.operation.read', function (error, result) {
+            if (error) {
                 logger.error(error);
                 action.error(error);
                 return;
             }
             
             logger.done(result);
-            action.done(params.backends);
-        });
+            if (0 === result.affected) {
+                action.error(new C.caligula.errors.OperationLogNotFoundError(
+                    'An early successful publishing for group ' + params.name +
+                    ' can not be found'
+                ));
+                return;
+            }
+            
+            self.logger_.debug('Redirecting the rollback operation of group ' +
+                               params.name + ' to a new publishing with ' +
+                               C.lang.reflect.inspect(result.data[0]));
+                               
+            action.data = result.data[0];
+            self.publish(action);
+        })
     };
     
     /**
@@ -742,7 +1074,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         var params = action.data,
             self = this,
             logger = C.logging.getStepLogger(this.logger_),
-            owner = null,
+            locks = null,
             group = null,
             log = null;
 
@@ -750,24 +1082,27 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             function (next) { // Lock the operation log 
                 logger.start('Acquiring the operation lock for group ' +
                              params.name);
-                self.lock_(action, 'publish.group.' + params.name, next);
+             
+                // self.lock_(action, 'publishing.group.' + params.name, next);
+                self.lockGroupAndBackends_(action, params.name, false, next);
             },
             function (result, next) { // Query the current status
                 logger.done(result);
-                owner = result;
+                locks = result;
                 
                 logger.start('Querying current status of group ' + params.name);
-                action.data.internal = true;
+                action.data = {
+                    name: params.name,
+                    internal: true
+                };
                 action.acquire(action.name.replace(/publish$/, 'status'), next);
             },
             function (status, unused, next) { // Create an operation log
 
                 logger.done(status);
-                
                 logger.start('Checking if the group ' + params.name + 
-                             ' is available for ' + 
-                             (params.pause ? 'pausing' : 'resuming'));
-
+                             ' is available for new publishing');
+                
                 if (status.state === GroupState.RUNNING) {
                     next(new C.caligula.errors.OperationConflictError(
                         'Another "' + status.operator + '" operation is now ' +
@@ -789,7 +1124,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
 
                 logger.done();
                 group = status.group;
-
+                
                 logger.start('Creating ' + 
                              (params.pause ? 'pausing' : 'resuming') +
                              ' operation log for group ' + params.name);
@@ -810,7 +1145,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 action.data = {
                     criteria: { name: params.name },
                     update: { '$set': {
-                        package: params.package
+                        pause: params.pause
                     }}
                 };
                 logger.start('Updating the group ' + params.name +
@@ -829,7 +1164,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     nodes: group.backends,
                     command: '/usr/local/sinasrv2/sbin/rome-claudius-pause',
                     arguments: [params.pause],
-                    timeout: 120, // 2 min
+                    timeout: 120 * 1000, // 2 min
                     extras: { 
                         group: group.name, 
                         operation: log.id, 
@@ -839,7 +1174,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 action.acquire('orchestration.create', next);
             }
         ], function (error, result) {
-            var cleanup = function () {
+            self.unlockGroupAndBackends_(action, locks, function () {
                 if (error) {
                     logger.error(error);
                     action.error(error);
@@ -848,17 +1183,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
 
                 logger.done(result);
                 action.done();
-            };
-            
-            if (owner) {
-                self.logger_.debug('Release the pre-acquired operation lock ' +
-                                   'for group ' + params.name + ' ...');
-                self.unlock_(action, 'publishing.group.' + params.name, owner, 
-                             cleanup);
-                return;
-            }
-            
-            cleanup();
+            });
         });
     };
 
@@ -907,9 +1232,21 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             },
             function (result, unused, next) { // Read groups belongs to the
                                               // specified ISP
+                var error = null;
                 
                 logger.done(result);
-                overall = result.data;
+                overall = result.data || [];
+                
+                if (overall.length === 0) {
+                    error = new C.caligula.errors.ResourceNotEnoughError(
+                        'There is not a single backend server in ISP ' + isp +
+                        ' at all'
+                    );
+                    self.logger_.error(error.message);
+                    next(error);
+                    return;
+                }
+                
                 // Note that now only 10% of the overall traffic is allowd to 
                 // be redirected to the branched testing groups, so the 
                 // calculation is based on 10 and nodes participated in the
@@ -1185,7 +1522,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             nodes: group.backends,
             command: '/usr/local/sinasrv2/sbin/rome-config-sync',
             arguments: [tag],
-            timeout: 120 * 1000, // 120 sec
+            timeout: 15 * 60 * 1000, // 15 min
             extras: {
                 group: group.name, 
                 operation: log.id, 
@@ -1262,9 +1599,19 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 action.acquire('configuration.read', next);
             },
             function (result, unused, next) {
-                var loadbalancers = null;
+                var loadbalancers = null,
+                    error = null;
                 
                 logger.done(result);
+                if (0 === result.affected) {
+                    error = new C.caligula.errors.LoadBalancerNotFoundError(
+                        'Affected load balancers by group ' + group.name + 
+                        ' can not be found'
+                    );
+                    self.logger_.error(error.message);
+                    next(error);
+                    return;
+                }
                 
                 loadbalancers = result.data.map(function (loadbalancer) {
                     return loadbalancer.name;
@@ -1279,7 +1626,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     nodes: loadbalancers,
                     command: '/usr/local/sinasrv2/sbin/rome-config-sync',
                     arguments: [tag],
-                    timeout: 120 * 1000, // 120 sec
+                    timeout: 10 * 60 * 1000, // 10 min
                     extras: {
                         group: group.name, 
                         operation: log.id, 
@@ -1314,13 +1661,13 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     GroupHandler.prototype.lock_ = function(action, name, callback) {
         var params = action.data,
             self = this,
-            logger = C.logging.getStepLogger(this.logger_);
+            logger = C.logging.getStepLogger(this.logger_),
         
         logger.start('Calling lock.acquire on "' + name + '"');
         
         action.data = { 
             name: name,
-            lease: 5000 // max lifespan for a lock
+            lease: 1000 // max lifespan for a lock
         }; 
         
         action.acquire('lock.acquire', function (error, result) {

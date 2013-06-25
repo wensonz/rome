@@ -415,7 +415,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                 
                 if (job.shortcut) {
                     self.logger_.debug('Job is required to be shortcutted.');
-                    next(null, null);
+                    next(null, null, null);
                 }
                 
                 logger.start('Saving the job object into data storage');
