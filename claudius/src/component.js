@@ -6,4 +6,8 @@
  */
 Condotti.add('caligula.components.publishing.component', function (C) {
     //
-}, '0.0.1', { requires: ['caligula.components.publishing.group'] });
+}, '0.0.1', { requires: [
+    'caligula.components.publishing.group',
+    'caligula.components.publishing.package',
+    'caligula.components.publishing.loadbalancer'
+] });
