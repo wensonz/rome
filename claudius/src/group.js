@@ -288,7 +288,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         var params = action.data,
             self = this,
             logger = C.logging.getStepLogger(this.logger_),
-            owner = null,
+            locks = null,
             group = null,
             tag = null,
             log = null; // the publishing operation log
@@ -306,11 +306,13 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             function (next) { // Lock the operation log 
                 logger.start('Acquiring the operation lock for group ' +
                              params.name);
-                self.lock_(action, 'publishing.group.' + params.name, next);
+                             
+                // self.lock_(action, 'publishing.group.' + params.name, next);
+                self.lockGroupAndBackends_(action, params.name, false, next);
             },
             function (result, next) { // Query the current status
                 logger.done(result);
-                owner = result;
+                locks = result;
                 
                 logger.start('Querying current status of group ' + params.name);
                 action.data = {
@@ -322,10 +324,9 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             function (status, unused, next) { // Create an operation log
 
                 logger.done(status);
-                
                 logger.start('Checking if the group ' + params.name + 
                              ' is available for new publishing');
-
+                
                 if (status.state === GroupState.RUNNING) {
                     next(new C.caligula.errors.OperationConflictError(
                         'Another "' + status.operator + '" operation is now ' +
@@ -391,46 +392,23 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             function (result, unused, next) { // Creat orchestration job
                 logger.done(result);
 
-                logger.start('Creating orchestration job for publishing ' +
-                             params.package.name + '@' + 
-                             params.package.version + ' onto ' + 
-                             group.backends.toString() + ' of group ' +
-                             params.name);
-                action.data = {
-                    nodes: group.backends,
-                    command: '/usr/local/sinasrv2/sbin/rome-config-sync',
-                    arguments: [tag],
-                    timeout: 120 * 1000, // 120 sec
-                    extras: {
-                        group: group.name, 
-                        operation: log.id, 
-                        affected: 'backends'
-                    }
-                };
-                action.acquire('orchestration.create', next);
+                logger.start('Sending notification to update the package on ' +
+                             'backends ' + group.backends.toString() + 
+                             ' of group ' + params.name);
+                             
+                self.updateGroupBackendsConfiguration_(action, group, log, tag, next);
             }
         ], function (error, result) {
-
-            var cleanup = function () {
+            self.unlockGroupAndBackends_(action, locks, function () {
                 if (error) {
                     logger.error(error);
                     action.error(error);
                     return;
                 }
-
+                
                 logger.done(result);
                 action.done();
-            };
-            
-            if (owner) {
-                self.logger_.debug('Release the pre-acquired operation lock ' +
-                                   'for group ' + params.name + ' ...');
-                self.unlock_(action, 'publishing.group.' + params.name, owner, 
-                             cleanup);
-                return;
-            }
-            
-            cleanup();
+            });
         });
     };
 
@@ -444,30 +422,23 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     GroupHandler.prototype.create = function (action) {
         var self = this,
             params = action.data,
-            allocated = {},
-            nodes = null,
-            locks = {},
+            locks = null,
             group = null,
             logger = C.logging.getStepLogger(this.logger_);
 
         C.async.waterfall([
-            function (next) { // Lock the group
-                logger.start('Acquiring the lock on on group ' + params.name);
-                self.lock_(action, 'publishing.group.' + params.name, next);
-            },
-            function (result, next) { // Lock the backend
-                logger.done(result);
-                locks['publishing.group.' + params.name] = result;
-                // locks.group = result;
-
-                logger.start('Acquiring the lock on the backend servers');
-                self.lock_(action, 'publishing.backend', next);
+            function (next) { // Lock the group and backends
+                logger.start('Acquiring the lock on on group ' + params.name +
+                             ' and backends for resource allocation');
+                self.lockGroupAndBackends_(action, params.name, true, next);
+                // self.lock_(action, 'publishing.group.' + params.name, next);
             },
             function (result, next) { // Check if group already exist
                 logger.done(result);
-                locks['publishing.backend'] = result;
+                // locks['publishing.backend'] = result;
                 // locks.backend = result;
-
+                locks = result;
+                
                 logger.start('Seaching the existing groups for name ' + 
                              params.name);
                 
@@ -489,109 +460,19 @@ Condotti.add('caligula.components.publishing.group', function (C) {
 
                 logger.done();
                 
-                logger.start('Reading all groups belong to ISP ' + params.isp);
-                action.data = { 
-                    criteria: { isp: params.isp }, 
-                    fields: { backends: 1 }
-                };
-                action.acquire('data.publishing.group.read', next);
-            },
-            function (result, unused, next) { // Read all backend servers belong
-                                              // to the specified ISP
-                logger.done(result);
-                result.data = result.data || [];
-                result.data.forEach(function (item) {
-                    item.backends.forEach(function (backend) {
-                        allocated[backend] = true;
-                    });
-                });
-
-                logger.start('Reading all backend servers belong to ISP ' +
-                             params.isp);
+                logger.start('Trying to allocate backend servers of ISP ' +
+                             params.isp + ' at scale ' + params.scale);
                 
-                action.data = { criteria: {
-                    includes: { '$all': [
-                        'property.weibo.master-site.variants',
-                        'isp.' + params.isp
-                    ]},
-                    type: 'node'
-                }, fields: { name: 1 } };
-
-                action.acquire('configuration.read', next);
+                self.allocateBackends_(action, params.isp, params.scale, next);
             },
-            function (result, unused, next) { // Read deleting oeprations 
-                logger.done(result);
-                nodes = result.data || [];
-                
-                logger.start('Reading deleting operations currently on going');
-                action.data = {
-                    fields: { group: 1, timestamp: 1, operator: 1, status: 1 },
-                    operations: { sort: { timestamp: 1} },
-                    by: 'group.name',
-                    aggregation: { group: { '$first': 'group' }}
-                };
-                
-                action.acquire('data.publishing.group.operation.group', next);
-            },
-            function (result, unused, next) { // create operation log
+            function (result, next) { // create operation log
                 var groups = null,
                     backends = {},
                     available = null,
                     required = 0;
                 
                 logger.done(result);
-                
-                result.data = result.data || [];
-                // find out the groups that are being deleted or failed to be
-                // deleted
-                groups = result.data.filter(function (item) { 
-                    return (item.operator === 'delete' &&
-                            (!item.status || 
-                             item.status.state === GroupState.FAILED));
-                             
-                }).map(function (item) {
-                    return item.group;
-                });
-                
-                self.logger_.debug('Groups being or has been deleted are: ' +
-                                   C.lang.reflect.inspect(groups));
-                
-                
-                groups.forEach(function (group) {
-                    group.backends.forEach(function (backend) {
-                        allocated[backend] = true;
-                    }); 
-                });
-                
-                available = nodes.filter(function (node) {
-                    return !(node.name in allocated);
-                }).map(function (node) {
-                    return node.name;
-                });
-                
-                logger.start('Verifying the available resources for ' + 
-                             params.scale + '% for group ' + params.name);
-                // Note that now only 10% of the overall traffic is allowd to 
-                // be redirected to the branched testing groups, so the 
-                // calculation is based on 10 and nodes participated in the
-                // testing.
-                // Note: now that there are only 2 ISPs supported, CNC and CT
-                //       and the resources are deployed in two IDCs equally,
-                //       so the scale are divided by 5, which means all
-                //       resources of one ISP are to be allocated if user
-                //       specifies the scale to be 5
-                required = Math.ceil(nodes.length * params.scale / 5);
-                if (available.length === 0 || available.length < required) {
-                    next(new C.caligula.errors.ResourceNotEnoughError(
-                        'Required scale ' + params.scale + '% for group ' +
-                        params.name + ' needs at least ' + required + 
-                        ', but only ' + available.length + ' are available'
-                    ));
-                    return;
-                }
-                
-                params.backends = available.slice(0, required);
-                logger.done(params.backends);
+                params.backends = result;
                 
                 action.data = {
                     id: C.uuid.v4(),
@@ -615,20 +496,15 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             }
         ], function (error, result) {
             
-            C.async.forEachSeries(Object.keys(locks), function (name, next) {
-                self.logger_.debug('The pre-acquired ' + name + ' lock ' +
-                                   'for group ' + params.name + 
-                                   ' are to be released');
-                self.unlock_(action, name, locks[name], next);
-            }, function () {
+            self.unlockGroupAndBackends_(action, locks, function () {
                 if (error) {
                     logger.error(error);
                     action.error(error);
                     return;
                 }
-
+                
                 logger.done(result);
-                action.done(param.backends);
+                action.done(params.backends);
             });
         });
     };
@@ -642,11 +518,12 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     GroupHandler.prototype.scale = function (action) {
         var params = action.data,
             self = this,
-            locks = {},
+            locks = null,
+            group = null,
             logger = C.logging.getStepLogger(this.logger_);
         
         C.async.waterfall([
-            function (next) { // Lock the group
+            function (next) { // Lock the group and backends
                 logger.start('Acquiring the lock on on group ' + params.name);
                 self.lock_(action, 'publishing.group.' + params.name, next);
             },
@@ -934,7 +811,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 
                 self.logger_.debug('Groups being deleted, or failed to be ' +
                                    'deleted are: ' + 
-                                   C.lang.reflect.inspect(groups));
+                                   C.lang.reflect.inspect(deleted));
                 
                 // Assume the backend servers belongs to these groups are 
                 // allocated
@@ -942,7 +819,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 // now
                 allocated.forEach(function (group) {
                     group.backends.forEach(function (backend) {
-                        if (!backend in unique) {
+                        if (!(backend in unique)) {
                             unique[backend] = true;
                             count += 1;
                         }
@@ -951,7 +828,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 
                 deleted.forEach(function (group) {
                     group.backends.forEach(function (backend) {
-                        if (!backend in unique) {
+                        if (!(backend in unique)) {
                             unique[backend] = true;
                             count += 1;
                         }
@@ -976,7 +853,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                              ' backend servers for scale ' + scale);
                 
                 overall.some(function (backend) {
-                    if (!backend.name in unique) {
+                    if (!(backend.name in unique)) {
                         backends.push(backend);
                         needed -= 1;
                     }
@@ -988,6 +865,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 });
                 
                 next(backends);
+            }
         ], function (error, result) {
             if (error) {
                 logger.error(error);
@@ -1068,7 +946,11 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         this.logger_.debug('Unlocking the group and backend servers with ' +
                            'provided locking info: ' + 
                            C.lang.reflect.inspect(locks));
-                           
+        
+        if (!locks) {
+            callback && callback();
+            return;
+        }                   
         C.async.forEachSeries(Object.keys(locks), function (name, next) {
             logger.done();
             logger.start('The pre-acquired lock "' + name + 
