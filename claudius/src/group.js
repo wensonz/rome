@@ -15,6 +15,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     C.namespace('caligula.publishing.group').GroupState = GroupState;
     
     var JobState = C.namespace('caligula.orchestration').JobState;
+    var NodeState = C.namespace('caligula.orchestration').NodeState;
     
     /**
      * This GroupHandler class is a child class of Handler, and designed to
@@ -302,6 +303,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         //  6. create orchestration job
         //  7. return
         
+        action.lease = 15 * 60 * 1000;
         C.async.waterfall([
             function (next) { // Lock the operation log 
                 logger.start('Acquiring the operation lock for group ' +
@@ -555,6 +557,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             tag = null,
             difference = null,
             logger = C.logging.getStepLogger(this.logger_);
+        
+        action.lease = 15 * 60 * 1000;
         
         C.async.waterfall([
             function (next) { // Lock the group and backends
@@ -1023,7 +1027,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         action.data = {
             criteria: {
                 'params.name': params.name,
-                'operator': 'publish'
+                'operator': 'publish',
                 'status': {
                     '$exists': true,
                     'state': GroupState.OK
@@ -1661,13 +1665,13 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     GroupHandler.prototype.lock_ = function(action, name, callback) {
         var params = action.data,
             self = this,
-            logger = C.logging.getStepLogger(this.logger_),
+            logger = C.logging.getStepLogger(this.logger_);
         
         logger.start('Calling lock.acquire on "' + name + '"');
         
         action.data = { 
             name: name,
-            lease: 1000 // max lifespan for a lock
+            lease: action.lease || 10 * 1000 // 10 sec, max lifespan for a lock
         }; 
         
         action.acquire('lock.acquire', function (error, result) {
