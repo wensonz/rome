@@ -628,7 +628,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 }
 
                 logger.done(result);
-                action.done();
+                action.done(param.backends);
             });
         });
     };
@@ -810,6 +810,404 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      *                        PRIVATE MEMBERS                             *
      *                                                                    *
      **********************************************************************/
+    
+    /**
+     * Allocate the required scale of backend servers
+     *
+     * @method allocateBackends_
+     * @param {Action} action the action trigger this allocation
+     * @param {String} isp the name of the isp which the backend servers to be
+     *                     allocated belong to
+     * @param {Number} scale the scale of the backend servers to be allocated
+     * @param {Function} callback the callback function to be invoked after the
+     *                            required backend servers have been 
+     *                            successfully allocated, or some error occurs.
+     *                            The signature of the callback function is
+     *                            'function (error, backends) {}'
+     */
+    GroupHandler.prototype.allocateBackends_ = function (action, isp, scale, callback) {
+        var self = this,
+            logger = C.logging.getStepLogger(this.logger_),
+            allocated = null,
+            deleted = null,
+            needed = 0,
+            overall = null;
+        
+        C.async.waterfall([
+            function (next) { // Read all backend servers belong
+                              // to the specified ISP
+                logger.start('Reading all backend servers belong to ISP ' + isp);
+                
+                action.data = { criteria: {
+                    includes: { '$all': [
+                        'property.weibo.master-site.variants',
+                        'isp.' + isp
+                    ]},
+                    type: 'node'
+                }, fields: { name: 1 } };
+                
+                action.acquire('configuration.read', next);
+            },
+            function (result, unused, next) { // Read groups belongs to the
+                                              // specified ISP
+                
+                logger.done(result);
+                overall = result.data;
+                // Note that now only 10% of the overall traffic is allowd to 
+                // be redirected to the branched testing groups, so the 
+                // calculation is based on 10 and nodes participated in the
+                // testing.
+                // Note: now that there are only 2 ISPs supported, CNC and CT
+                //       and the resources are deployed in two IDCs equally,
+                //       so the scale are divided by 5, which means all
+                //       resources of one ISP are to be allocated if user
+                //       specifies the scale to be 5
+                needed = Math.ceil(overall.length * scale / 5);
+                
+                logger.start('Reading all groups belong to ISP ' + isp);
+                action.data = { 
+                    criteria: { isp: isp }, 
+                    fields: { backends: 1 }
+                };
+                action.acquire('data.publishing.group.read', next);
+            },
+            function (result, unused, next) { // Read deleting oeprations 
+                var count = 0;
+                
+                logger.done(result);
+                allocated = result.data || [];
+                
+                logger.start('Checking if the avaiable backend servers are ' +
+                             'enough for scale ' + scale);
+                count = allocated.reduce(function (current, group) {
+                    return current + group.backends.length;
+                }, 0);
+                
+                if (overall.length - count < needed) {
+                    next(new C.caligula.errors.ResourceNotEnoughError(
+                        'Scale ' + scale + ' requires at least ' + needed +
+                        ' backend servers, but now at most ' + 
+                        (overall.length - count) + ' are available'
+                    ));
+                    return;
+                }
+                
+                logger.done();
+                
+                /*
+                count = result.data.length;
+                result.data.forEach(function (item) {
+                    item.backends.forEach(function (backend) {
+                        allocated[backend] = true;
+                    });
+                });
+                */
+                
+                logger.start('Reading deleting operations currently on going');
+                action.data = {
+                    fields: { group: 1, timestamp: 1, operator: 1, status: 1 },
+                    operations: { sort: { timestamp: 1} },
+                    by: 'group.name',
+                    aggregation: { group: { '$first': 'group' }}
+                };
+                
+                action.acquire('data.publishing.group.operation.group', next);
+            },
+            function (result, unused, next) { // create operation log
+                var unique = {},
+                    count = 0,
+                    backends = [];
+                
+                logger.done(result);
+                
+                result.data = result.data || [];
+                // find out the groups that are being deleted or failed to be
+                // deleted
+                deleted = result.data.filter(function (item) { 
+                    return (item.operator === 'delete' &&
+                            (!item.status || // RUNNING
+                             item.status.state === GroupState.FAILED));
+                 
+                }).map(function (item) {
+                    return item.group;
+                });
+                
+                self.logger_.debug('Groups being deleted, or failed to be ' +
+                                   'deleted are: ' + 
+                                   C.lang.reflect.inspect(groups));
+                
+                // Assume the backend servers belongs to these groups are 
+                // allocated
+                // Calculate the unique numbers of the backend servers allocated
+                // now
+                allocated.forEach(function (group) {
+                    group.backends.forEach(function (backend) {
+                        if (!backend in unique) {
+                            unique[backend] = true;
+                            count += 1;
+                        }
+                    });
+                });
+                
+                deleted.forEach(function (group) {
+                    group.backends.forEach(function (backend) {
+                        if (!backend in unique) {
+                            unique[backend] = true;
+                            count += 1;
+                        }
+                    });
+                });
+                
+                logger.start('Checking again if the avaiable backend servers' +
+                             ' are enough for scale ' + scale + 
+                             ' after merging the ones being deleted');
+                if (overall.length - count < needed) {
+                    next(new C.caligula.errors.ResourceNotEnoughError(
+                        'Scale ' + scale + ' requires at least ' + needed +
+                        ' backend servers, but now at most ' + 
+                        (overall.length - count) + ' are available'
+                    ));
+                    return;
+                }
+                
+                logger.done();
+                
+                logger.start('Allocating ' + needed + 
+                             ' backend servers for scale ' + scale);
+                
+                overall.some(function (backend) {
+                    if (!backend.name in unique) {
+                        backends.push(backend);
+                        needed -= 1;
+                    }
+                    return needed === 0;
+                });
+                
+                backends = backends.map(function (backend) {
+                    return backend.name;
+                });
+                
+                next(backends);
+        ], function (error, result) {
+            if (error) {
+                logger.error(error);
+                callback(error);
+                return;
+            }
+            
+            logger.done(result);
+            callback(null, result);
+        });
+    };
+    
+    
+    /**
+     * Lock the specified group and also the entire backend servers if required
+     *
+     * @method lockGroupAndBackends_
+     * @param {Action} action the action trigger this locking
+     * @param {String} name the group name to be locked
+     * @param {Boolean} both whether the both group and backends are locked, or
+     *                       only specified group is locked.
+     * @param {Function} callback the callback function to be invoked after the
+     *                            specified group and backends are locked
+     *                            successfully, or some error occurs.
+     *                            The signature of the callback function is
+     *                            'function (error, locks) {}'
+     */
+    GroupHandler.prototype.lockGroupAndBackends_ = function (action, name, both, callback) {
+        var self = this,
+            logger = C.logging.getStepLogger(this.logger_),
+            locks = {};
+            
+        C.async.waterfall([
+            function (next) { // Lock the group
+                logger.start('Acquiring the lock on on group ' + name);
+                self.lock_(action, 'publishing.group.' + name, next);
+            },
+            function (result, next) { // Lock the backend
+                logger.done(result);
+                locks['publishing.group.' + name] = result;
+                // locks.group = result;
+
+                logger.start('Acquiring the lock on the backend servers');
+                self.lock_(action, 'publishing.backend', next);
+            }
+        ], function (error, result) {
+            if (error) {
+                logger.error(error);
+                self.unlockGroupAndBackends_(action, locks, function () {
+                    callback(error);
+                });
+                return;
+            }
+            
+            logger.done(result);
+            locks['publishing.backend'] = result;
+            callback(null, locks);
+        });
+    };
+    
+    /**
+     * Unlock the pre-locked group and backend servers with the provided locking
+     * info
+     *
+     * @method unlockGroupAndBackends_
+     * @param {Action} action the action trigger this unlocking
+     * @param {Object} locks the locks object obtained when locking
+     * @param {Function} callback the callback function to be invoked after the
+     *                            specified group and backends are unlocked
+     *                            successfully, or some error occurs.
+     *                            The signature of the callback function is
+     *                            'function (error) {}'
+     */
+    GroupHandler.prototype.unlockGroupAndBackends_ = function (action, locks, callback) {
+        var self = this,
+            logger = C.logging.getStepLogger(this.logger_);
+        
+        this.logger_.debug('Unlocking the group and backend servers with ' +
+                           'provided locking info: ' + 
+                           C.lang.reflect.inspect(locks));
+                           
+        C.async.forEachSeries(Object.keys(locks), function (name, next) {
+            logger.done();
+            logger.start('The pre-acquired lock "' + name + 
+                         '" are to be released');
+            self.unlock_(action, name, locks[name], next);
+        }, function (error) {
+            if (error) {
+                logger.error(error);
+            } else {
+                logger.done();
+            }
+            callback && callback();
+        });
+    };
+    
+    
+    /**
+     * Update the configuration for the backends belong to the specified group
+     *
+     * @method updateGroupBackendsConfiguration_
+     * @param {Action} action the action trigger this update
+     * @param {Object} group the group configurations for whose backends are
+     *                       to be updated
+     * @param {Object} log the operation log object
+     * @param {String} tag the tag name to be used for configuration generation
+     * @param {Function} callback the callback function to be invoked after the
+     *                            notification of updating the configuration of
+     *                            the backend servers of the specified group has
+     *                            been successfully sent, or some error occurs.
+     *                            The signature of the callback function is
+     *                            'function (error) {}'
+     */
+    GroupHandler.prototype.updateGroupBackendsConfiguration_ = function (action, group, log, tag, callback) {
+        var self = this,
+            logger = C.logging.getStepLogger(this.logger_);
+        
+        logger.start('Creating orchestration job for publishing ' +
+                     group.package.name + '@' + 
+                     group.package.version + ' onto ' + 
+                     group.backends.toString() + ' of group ' +
+                     group.name);
+        
+        action.data = {
+            nodes: group.backends,
+            command: '/usr/local/sinasrv2/sbin/rome-config-sync',
+            arguments: [tag],
+            timeout: 120 * 1000, // 120 sec
+            extras: {
+                group: group.name, 
+                operation: log.id, 
+                affected: 'backends'
+            }
+        };
+        action.acquire('orchestration.create', function (error, result) {
+            if (error) {
+                logger.error(error);
+                callback(error);
+                return;
+            }
+            
+            logger.done(result);
+            callback();
+        });
+    };
+    
+    
+    /**
+     * Update the configuration for the load balancers belong to the specified
+     * isp
+     *
+     * @method updateLoadBalancerConfiguration_
+     * @param {Action} action the action trigger this update
+     * @param {Object} group the group configurations for whose backends are
+     *                       to be updated
+     * @param {Object} log the operation log object
+     * @param {String} tag the tag name to be used for configuration generation
+     * @param {Function} callback the callback function to be invoked after the
+     *                            notification of updating the configuration of
+     *                            the backend servers of the specified group has
+     *                            been successfully sent, or some error occurs.
+     *                            The signature of the callback function is
+     *                            'function (error) {}'
+     */
+    GroupHandler.prototype.updateLoadBalancerConfiguration_ = function (action, group, log, tag, callback) {
+        var self = this,
+            logger = C.logging.getStepLogger(this.logger_);
+            
+        C.async.waterfall([
+            function (next) { // Read load balancers belong to the ISP of the
+                              // group
+                logger.start('Reading load balancers for ISP ' + group.isp);
+                action.data = { criteria: {
+                    includes: { '$all': [
+                        'property.weibo.mastersite.loadbalancer',
+                        'isp.' + group.isp
+                    ]},
+                    type: 'node'
+                }, fields: { name: 1 } };
+                action.acquire('configuration.read', next);
+            },
+            function (result, unused, next) {
+                var loadbalancers = null;
+                
+                logger.done(result);
+                
+                loadbalancers = result.data.map(function (loadbalancer) {
+                    return loadbalancer.name;
+                });
+                // TODO: avoid load balancers being updated by two API calls
+                //       at the same time
+                logger.start('Creating orchestration job for updating ' +
+                             'configurations of load balancers ' +
+                             loadbalancers.toString());
+                
+                action.data = {
+                    nodes: loadbalancers,
+                    command: '/usr/local/sinasrv2/sbin/rome-config-sync',
+                    arguments: [tag],
+                    timeout: 120 * 1000, // 120 sec
+                    extras: {
+                        group: group.name, 
+                        operation: log.id, 
+                        affected: 'loadbalancers'
+                    }
+                };
+                action.acquire('orchestration.create', next);
+            }
+        ], function (error, result) {
+            if (error) {
+                logger.error(error);
+                callback(error);
+                return;
+            }
+            
+            logger.done(result);
+            callback();
+        });
+    };
+    
     
     /**
      * Lock the entire operation log collection
