@@ -485,7 +485,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
     OrchestrationHandler.prototype.onDispatchTimeout_ = function (dispatch) {
         var error = new C.caligula.errors.RequestTimeoutError('Request timeout');
         
-        this.logger_.warn('Request ' + message.id + ' for job ' + 
+        this.logger_.warn('Request ' + dispatch.id + ' for job ' + 
                           C.lang.reflect.inspect(dispatch.job) + 
                           ' timeout. Result: ' +
                           C.lang.reflect.inspect(dispatch.responses));
