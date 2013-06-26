@@ -186,7 +186,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                     timestamp: Date.now(),
                     command: 'STAT'
                 };
-                self.dispatch_(job.nodes, message, next);
+                self.dispatch_(job, message, next);
             },
             function (result, next) {
                 var completed = true;
@@ -296,7 +296,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                     timestamp: Date.now(),
                     command: 'TEE'
                 };
-                self.dispatch_(job.nodes, message, next);
+                self.dispatch_(job, message, next);
             }
         ], function (error, result) {
             if (error) {
@@ -388,7 +388,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                     timestamp: Date.now()
                 };
                 
-                self.dispatch_(job.nodes, message);
+                self.dispatch_(job, message);
                 next();
             }
         ], function (error) {
