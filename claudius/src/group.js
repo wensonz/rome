@@ -114,10 +114,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                              log.id + ' of group ' + params.name);
                 //
                 action.data = { criteria: { 
-                    'extras': {
-                        group: params.name,
-                        operation: log.id
-                    }
+                    'extras.group': params.name,
+                    'extras.operation': log.id
                 }};
                 action.acquire('orchestration.read', next);
             },
