@@ -225,11 +225,10 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     var nodes = result[index].nodes;
                     
                     status.details[job.extras.affected] = nodes;
-                    if (failed) {
-                        return;
-                    }
-                    failed = nodes.some(function (node) {
-                        return node.error && node.error.code !== 40800;
+                    
+                    failed = failed || Object.keys(nodes).some(function (name) {
+                        return nodes[name].error && 
+                               nodes[name].error.code !== 40800;
                     });
                 });
                 

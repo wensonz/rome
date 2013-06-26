@@ -1,7 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.6
 
 import sys
 import os
+import os.path
 import urllib2
 import urllib
 import json
@@ -39,7 +40,7 @@ def getUrl ():
         addresses = socket.gethostbyname_ex(host)[2]
     except:
         print '>>> Getting ip addresses for host %s failed. Traceback: ' % (host)
-        traceback.print_exc()
+        print '  * %s' % traceback.format_exc()
         sys.exit(1)
     
     index = random.randint(0, len(addresses) - 1)
@@ -59,7 +60,7 @@ def updateConfiguration (url, tag):
         content = json.loads(body)
     except:
         print '>>> Generating new configuration with TAG %s failed. Traceback:' % (tag)
-        traceback.print_exc()
+        print '  * %s' % traceback.format_exc()
         sys.exit(1)
     
     if 'error' in content:
@@ -79,7 +80,7 @@ def updateConfiguration (url, tag):
         urllib.urlretrieve(url + remote, local)
     except:
         print '>>> Downloading the genreated tarball %s%s failed. Traceback: ' % (url, remote)
-        traceback.print_exc()
+        print '  * %s' % traceback.format_exc()
         sys.exit(1)
     
     # Extract the downloaded tarball
@@ -89,18 +90,20 @@ def updateConfiguration (url, tag):
         targz.close()
     except:
         print '>>> Extracting downloaded configuration tarball %s failed.' % (local)
-        traceback.print_exc()
+        print '  * %s' % traceback.format_exc()
         sys.exit(1)
     
     directory = config.tarballs['local'] + '/' + name
     # Update the link of salt to this new dir
     try:
         os.chdir(config.salt['root'])
-        os.unlink(config.salt['config'])
+        if os.path.exists(config.salt['config']):
+            os.unlink(config.salt['config'])
+        
         os.symlink(directory, config.salt['config'])
     except:
         print '>>> Linking the salt config root %s to %s failed. Traceback: ' % (config.salt['config'], directory)
-        traceback.print_exc()
+        print '  * %s' % traceback.format_exc()
         sys.exit(1)
     
 
