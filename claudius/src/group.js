@@ -389,8 +389,6 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             function (result, unused, next) { // Create configuration TAG
                 logger.done(result);
                 
-                group.package = params.package;
-                
                 tag = 'TAG_GROUP_' + params.name.toUpperCase() + 
                       '_PUBLISH@' + Date.now().toString();
 
@@ -430,6 +428,10 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                                                               log, tag);
                     };
                 }
+                
+                // Update the package field for calling
+                // updateGroupBackendsConfiguration_
+                group.package = params.package;
                 
                 logger.start('Sending notification to update the package on ' +
                              'backends ' + group.backends.toString() + 
