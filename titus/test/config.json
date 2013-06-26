@@ -26,6 +26,6 @@
         },
         "id": "10.210.213.51",
         "timeout": 10000,
-        "root": "/tmp/rome/"
+        "root": "/data1/rome/orca"
     }
 }

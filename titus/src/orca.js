@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 /**
  * The main module for the orchestration client - orca
  *
@@ -5,10 +7,12 @@
  */
 
 var condotti = require('condotti'),
+    natives = require('natives'),
     Kafka = require('franz-kafka'),
     mkdirp = require('mkdirp'),
     C = null,
-    config = null;
+    config = null,
+    file = null;
 
 /**
  * The enumerables defined for node state
@@ -715,6 +719,34 @@ Orca.prototype.dispatch_ = function (target, message) {
 
 /******************************************************************************
  *                                                                            *
+ *                                  MAIN                                      * 
+ *                                                                            *
+ *****************************************************************************/
+
+// main
+if (process.argv.length < 3) {
+    file = natives.path.resolve(__dirname, 'config.json');
+} else {
+    file = process.argv[2];
+}
+
+process.stdout.write('>>> Loading config from file "' + file +
+                     '" ...');
+try {
+    config = require(file);
+} catch (e) {
+    process.stdout.write('\t\t[ !! ]\n');
+    process.stdout.write('  * Error: ' + e.toString() + '\n');
+    process.exit(0);
+}
+
+process.stdout.write('\t\t[ OK ]\n');
+
+C = condotti.Condotti(config.condotti);
+
+//
+/******************************************************************************
+ *                                                                            *
  *                                  ERRORS                                    * 
  *                                                                            *
  *****************************************************************************/
@@ -818,30 +850,11 @@ function UnsupportedCommandTypeError (message) {
 }
 C.lang.inherit(UnsupportedCommandTypeError, Error);
 
-/******************************************************************************
- *                                                                            *
- *                                  MAIN                                      * 
- *                                                                            *
- *****************************************************************************/
 
-if (require.main === module) {
-    // main
-    process.stdout.write('>>> Loading config from file "' + process.argv[2] +
-                         '" ...');
-    try {
-        config = require(process.argv[2])
-    } catch (e) {
-        process.stdout.write('\t\t[ !! ]\n');
-        process.stdout.write('  * Error: ' + e.toString() + '\n');
-        process.exit(0);
-    }
-    process.stdout.write('\t\t[ OK ]\n');
+// ========== START RUN ==========  //
     
-    C = condotti.Condotti(config.condotti);
-    
-    try {
-        new Orca(config.orca).run();
-    } catch (e) {
-        process.exit(1);
-    }
+try {
+    new Orca(config.orca).run();
+} catch (e) {
+    process.exit(1);
 }
