@@ -1248,7 +1248,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 
                 action.data = { criteria: {
                     includes: { '$all': [
-                        'property.weibo.master-site.variants',
+                        'property.weibo.mastersite.variants',
                         'isp.' + isp
                     ]},
                     type: 'node'
