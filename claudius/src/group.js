@@ -194,6 +194,13 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 status.group = group; // current group object, or the snapshot
                                       // one in a 'delete' operation
                 
+                // The group is created successfully
+                if (log.operator === 'create') {
+                    status.state = GroupState.OK;
+                    next(null, status);
+                    return;
+                }
+                
                 if (!jobs) { // orchestration job not created
                     status.state = locked ? GroupState.RUNNING : 
                                             GroupState.FAILED;
