@@ -70,10 +70,14 @@ Condotti.add('caligula.components.configuration.resources.template', function (C
             },
             function (made, next) { // render the dust.js template
                 var dust = C.require('dust'),
-                    compiled = null;
+                    compiled = null,
+                    template = null;
                 
                 logger.done(made);
                 logger.start('Rendering template for resource ' + name);
+                template = resource.template.replace(/ /g, '{~s}').
+                                             replace(/\n/g, '{~n}');
+                                             
                 compiled = dust.compile(resource.template, name);
                 dust.loadSource(compiled);
                 dust.render(name, context, next);
