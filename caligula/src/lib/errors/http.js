@@ -391,4 +391,24 @@ Condotti.add('caligula.errors.http', function (C) {
     C.lang.inherit(FoundRedirection, HttpError);
     C.namespace('caligula.errors').FoundRedirection = FoundRedirection;
     
+    /**
+     * Unsupported Media Type.
+     *
+     * @class UnsupportedTypeError
+     * @constructor
+     * @extends HttpError
+     * @param {Number} code the detailed error code
+     * @param {String} message the error message
+     */
+    function UnsupportedTypeError(code, message) {
+        if (String === C.lang.reflect.getObjectType(code)) {
+            message = code;
+            code = 0;
+        }
+        /* inheritance */
+        this.super(415, 41500 + code, message);
+    }
+    C.lang.inherit(UnsupportedTypeError, HttpError);
+    C.namespace('caligula.errors').UnsupportedTypeError = UnsupportedTypeError;
+    
 }, '0.0.1', { requires: [] });
