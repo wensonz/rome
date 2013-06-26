@@ -184,7 +184,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                     id: C.uuid.v4(),
                     sender: self.config_.id,
                     job: job.id,
-                    timestamp: Date.now(),
+                    timestamp: Math.floor(Date.now() / 1000),
                     command: 'STAT'
                 };
                 self.dispatch_(job, message, next);
@@ -294,7 +294,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                     id: C.uuid.v4(),
                     sender: self.config_.id,
                     job: job.id,
-                    timestamp: Date.now(),
+                    timestamp: Math.floor(Date.now() / 1000),
                     command: 'TEE'
                 };
                 self.dispatch_(job, message, next);
@@ -386,7 +386,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                     sender: self.config_.id,
                     job: job.id,
                     command: 'CANCEL',
-                    timestamp: Date.now()
+                    timestamp: Math.floor(Date.now() / 1000)
                 };
                 
                 self.dispatch_(job, message);
@@ -446,7 +446,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                     sender: self.config_.id,
                     job: job.id,
                     command: 'EXEC',
-                    timestamp: Date.now(),
+                    timestamp: Math.floor(Date.now() / 1000),
                     params: {
                         command: job.command,
                         arguments: job.arguments,
