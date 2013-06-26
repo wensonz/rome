@@ -87,9 +87,10 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
         logger.start('Querying the group belongs to ISP ' + isp);
         
         action.acquire('data.publishing.group.read', function (error, result) {
-            var upstreams = [],
-                mapping = { uid: [], geo: [] },
-                strategies = { uid: [], geo: [] },
+            var upstreams = null,
+                mapping = null,
+                strategies = null,
+                context = null,
                 path = null,
                 key = null;
                 
@@ -108,6 +109,21 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
                 return;
             }
             
+            configuration.context = configuration.context || {};
+            context = configuration.context;
+            
+            context.upstreams = context.upstreams || [];
+            context.mapping = context.mapping || {
+                uid: [], geo: []
+            };
+            context.strategies = context.strategies || {
+                uid: [], geo: []
+            };
+            
+            upstreams = context.upstreams;
+            mapping = context.mapping;
+            strategies = context.strategies;
+            
             logger.start('Generating context data for the strategies');
             try {
                 result.data.forEach(function (group, index) {
@@ -117,7 +133,11 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
                         name: group.name,
                         members: group.backends
                     });
-                
+                    
+                    if (!group.strategy) {
+                        //
+                    }
+                    
                     switch (group.strategy.type) {
                     case 'UID':
                         mapping.uid.push({
@@ -167,11 +187,6 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
                 callback(e);
                 return;
             }
-            
-            configuration.context = configuration.context || {};
-            configuration.context.upstreams = upstreams;
-            configuration.context.mapping = mapping;
-            configuration.context.strategies = strategies;
             
             logger.done(configuration.context);
             callback();
