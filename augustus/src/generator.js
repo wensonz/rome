@@ -243,6 +243,7 @@ Condotti.add('caligula.components.configuration.generator', function (C) {
                     merged = merger.merge(dependencies);
                 } catch (e) {
                     next(e);
+                    return;
                 }
                 logger.done(merged);
                 
