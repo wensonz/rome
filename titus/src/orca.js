@@ -218,7 +218,7 @@ Orca.prototype.handleTeeCommand_ = function (message) {
         function (next) {
             logger.start('Checking if job ' + message.job + 
                          ' exists under path "' + path + '"');
-            C.natives.fs.exists(path, next);
+            C.natives.fs.exists(path, next.bind(null, null));
         },
         function (exists, next) {
             var error = null;
@@ -234,7 +234,7 @@ Orca.prototype.handleTeeCommand_ = function (message) {
             path = C.natives.path.resolve(path, 'output');
             logger.start('Checking if the "output" file exists under path ' +
                          path);
-            C.natives.fs.exists(path, next);
+            C.natives.fs.exists(path, next.bind(null, null));
         },
         function (exists, next) {
             var error = null;
@@ -347,7 +347,7 @@ Orca.prototype.handleStatCommand_ = function (message) {
         function (next) {
             logger.start('Checking if the job ' + message.job + 
                          ' exists under path ' + path);
-            C.natives.fs.exists(path, next);
+            C.natives.fs.exists(path, next.bind(null, null));
         },
         function (exists, next) {
             logger.done(exists);
@@ -361,7 +361,7 @@ Orca.prototype.handleStatCommand_ = function (message) {
             path = C.natives.path.resolve(path, 'stat');
             logger.start('Checking if the "stat" file exists under path ' +
                          path);
-            C.natives.fs.exists(path, next);
+            C.natives.fs.exists(path, next.bind(null, null));
         },
         function (exists, next) {
             var error = null;
