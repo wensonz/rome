@@ -1413,7 +1413,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     return backend.name;
                 });
                 
-                next(backends);
+                next(null, backends);
             }
         ], function (error, result) {
             if (error) {
