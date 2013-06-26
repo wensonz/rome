@@ -236,7 +236,7 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
             user: 'www',
             group: 'www',
             mode: '644',
-            source: 'file//' + file
+            source: 'file://' + file
         };
     };
     
