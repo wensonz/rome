@@ -92,7 +92,9 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
                 strategies = null,
                 context = null,
                 path = null,
-                key = null;
+                key = null,
+                defaults = null,
+                unique = {};
                 
             action.data = params;
             
@@ -124,19 +126,36 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
             mapping = context.mapping;
             strategies = context.strategies;
             
+            upstreams.some(function (upstream) {
+                if (upstream.name === 'default.weibo.com') {
+                    defaults = upstream;
+                    return true;
+                }
+                return false;
+            });
+            
+            if (!defaults) {
+                defaults = { name: 'default.weibo.com', members: [] };
+                upstreams.push(defaults);
+            }
+            
             logger.start('Generating context data for the strategies');
             try {
                 result.data.forEach(function (group, index) {
                     key = 'G' + (index + 1);
                 
+                    if (!group.strategy) {
+                        // TODO: unique the backends
+                        defaults.members = defaults.members.concat(
+                            group.backends
+                        );
+                        return;
+                    }
+                    
                     upstreams.push({
                         name: group.name,
                         members: group.backends
                     });
-                    
-                    if (!group.strategy) {
-                        //
-                    }
                     
                     switch (group.strategy.type) {
                     case 'UID':
