@@ -75,20 +75,21 @@ Condotti.add('caligula.components.configuration.merger', function (C) {
         });
         
         return groups.reduce(function (merged, group, index) {
-            var intermediate = {};
+            var intermediate = null;
             
             if (!group.length) {
                 return merged;
             }
             
-            group.unshift(intermediate); // target
-            group.push(false); // don't overwrite
-            C.lang.merge.apply(C.lang, group);
+            intermediate = group.reduce(function (a, b) {
+                C.lang.merge(a.context, b.context, false);
+                C.lang.merge(a.resources, b.resources, false);
+            }, { context: {}, resources: {} });
             
             C.lang.merge(merged, intermediate);
             
             return merged;
-        }, {});
+        }, { context: {}, resources: {} });
     };
     
     C.namespace('caligula.configuration').ConfigurationMerger = ConfigurationMerger;
