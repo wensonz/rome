@@ -145,6 +145,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             },
             function (result, next) { // Build the status object
                 var status = {},
+                    running = false,
                     failed = false;
                 
                 if (result) {
@@ -207,11 +208,13 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 }
                 
                 // search for the minimum job state
-                status.state = result.reduce(function (min, current) { 
-                    return Math.min(min, current.job);
-                }, JobState.RUNNING);
+                running = result.some(function (state) {
+                    return state.job === JobState.RUNNING ||
+                           state.job === JobState.CANCELLING;
+                });
+                status.state = running ? GroupState.RUNNING : GroupState.DONE;
                 
-                status.state = status.state % 2; // translate to GroupState
+                // group has been successfully deleted
                 if ((status.state === GroupState.DONE) && 
                     (status.operator === 'delete')) {
                     next(new C.caligula.errors.GroupNotFoundError(
@@ -239,12 +242,13 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 next(null, status);
             },
             function (status, next) {
+                logger.done(status);
+                
                 if (status.state === GroupState.RUNNING) {
                     next(null, status);
                     return;
                 }
                 
-                logger.done(status);
                 logger.start('Saving the generated status object ' +
                              C.lang.reflect.inspect(status) + 
                              ' into operation log ' + log.id);
