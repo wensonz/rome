@@ -387,7 +387,9 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             },
             function (result, unused, next) { // Create configuration TAG
                 logger.done(result);
-
+                
+                group.package = params.package;
+                
                 tag = 'TAG_GROUP_' + params.name.toUpperCase() + 
                       '_PUBLISH@' + Date.now().toString();
 
