@@ -86,7 +86,7 @@ function Orca (config) {
      * @property uptime_
      * @type Number
      */
-    this.uptime_ = Date.now();
+    this.uptime_ = Math.floor(Date.now() / 1000);
     
     /* initialize */
     this.initialize_();
@@ -107,7 +107,7 @@ Orca.prototype.initialize_ = function () {
     this.kafka_.on('connect', this.onKafkaConnect_.bind(this));
     
     this.logger_.info('Orca client "' + this.config_.id + '" is initialized.');
-    this.logger_.info('Uptime: ' + this.uptime_);
+    this.logger_.info('Uptime (sec): ' + this.uptime_);
 };
 
 /**

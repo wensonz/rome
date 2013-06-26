@@ -92,7 +92,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
          * @property uptime_
          * @type Number
          */
-        this.uptime_ = Date.now();
+        this.uptime_ = Math.floor(Date.now() / 1000);
         
         /* initialize */
         this.initialize_();
@@ -131,7 +131,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
         });
         
         this.kafka_.connect();
-        this.logger_.info('Uptime: ' + this.uptime_);
+        this.logger_.info('Uptime (sec): ' + this.uptime_);
     };
     
     /**
