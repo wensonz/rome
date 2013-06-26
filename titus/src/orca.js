@@ -336,7 +336,7 @@ Orca.prototype.handleStatCommand_ = function (message) {
     
     child = this.running_[message.job];
     if (child) {
-        response.result = { state: states.RUNNING };
+        response.result = { state: NodeState.RUNNING };
         this.logger_.debug('STAT: RUNNING, child: ' + child.pid + ', job: ' + 
                            message.job);
         this.dispatch_(message.sender, response);
@@ -407,14 +407,14 @@ Orca.prototype.handleStatCommand_ = function (message) {
             response.result = {};
             
             if (stat.timeout) {
-                response.result.state = states.TIMEOUT;
+                response.result.state = NodeState.TIMEOUT;
             } else if (stat.cancelled) {
-                response.result.state = states.CANCELLED;
+                response.result.state = NodeState.CANCELLED;
             } else if (!stat.signal) {
-                response.result.state = states.EXITED;
+                response.result.state = NodeState.EXITED;
                 response.result.code = stat.code;
             } else {
-                response.result.state = states.KILLED;
+                response.result.state = NodeState.KILLED;
                 response.result.signal = stat.signal;
             }
         }

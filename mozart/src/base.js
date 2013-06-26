@@ -528,7 +528,6 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
      */
     OrchestrationHandler.prototype.dispatch_ = function (job, message, callback) {
         var content = null,
-            timer = null,
             self = this,
             dispatch = null;
         
@@ -567,17 +566,17 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
             topic.write(content);
         });
         
-        // Timeout handler
-        timer = setTimeout(this.onDispatchTimeout_.bind(this, dispatch), 
-                           this.config_.timeout);
-        
         dispatch = {
             id: message.id,
             job: job,
-            timer: timer,
             responses: {},
             callback: callback
         };
+        // Timeout handler
+        dispatch.timer = setTimeout(
+            this.onDispatchTimeout_.bind(this, dispatch), 
+            this.config_.timeout
+        );
         
         this.dispatching_[dispatch.id] = dispatch;
     };
