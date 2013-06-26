@@ -107,6 +107,7 @@ Orca.prototype.initialize_ = function () {
     this.kafka_.on('connect', this.onKafkaConnect_.bind(this));
     
     this.logger_.info('Orca client "' + this.config_.id + '" is initialized.');
+    this.logger_.info('Uptime: ' + this.uptime_);
 };
 
 /**

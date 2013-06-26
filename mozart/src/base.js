@@ -131,6 +131,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
         });
         
         this.kafka_.connect();
+        this.logger_.info('Uptime: ' + this.uptime_);
     };
     
     /**

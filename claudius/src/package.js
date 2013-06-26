@@ -31,12 +31,14 @@ Condotti.add('caligula.components.publishing.package', function (C) {
      *                        executed
      * @param {Object} configuration the configuration which this filter belongs
      *                               to
+     * @param {Object} configurations the configuration collection
      * @param {Function} callback the callback function to be invoked after the
      *                            configuration data has been successfully
      *                            filtered, or some error occurs. The signature
      *                            of this callback is 'function (error) {}'
      */
-    PackagePrefilter.prototype.execute = function (action, configuration, callback) {
+    PackagePrefilter.prototype.execute = function (action, configuration, 
+                                                   configurations, callback) {
         var params = action.data,
             self = this
             logger = C.logging.getStepLogger(this.logger_);
