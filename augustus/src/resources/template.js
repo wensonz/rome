@@ -78,7 +78,7 @@ Condotti.add('caligula.components.configuration.resources.template', function (C
                 template = resource.template.replace(/ /g, '{~s}').
                                              replace(/\n/g, '{~n}');
                                              
-                compiled = dust.compile(resource.template, name);
+                compiled = dust.compile(template, name);
                 dust.loadSource(compiled);
                 dust.render(name, context, next);
             },
