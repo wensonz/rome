@@ -405,8 +405,9 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 
                 if (!group.package) { // the first time group is published
                     updateLoadBalancer = function (state) {
-                        var failed = state.nodes.some(function (node) {
-                            var result = node.result;
+                        var failed = null;
+                        failed = Object.keys(state.nodes).some(function (name) {
+                            var result = state.nodes[name].result;
                             return !(result && 
                                      result.state === NodeState.EXITED && 
                                      result.code === 0);
