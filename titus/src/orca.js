@@ -212,7 +212,7 @@ Orca.prototype.handleTeeCommand_ = function (message) {
         id: message.id,
         sender: this.config_.id,
         job: message.job,
-        timestamp: Date.now()
+        timestamp: Math.floor(Date.now() / 1000)
     };
     
     C.async.waterfall([
@@ -332,7 +332,7 @@ Orca.prototype.handleStatCommand_ = function (message) {
         id: message.id,
         sender: this.config_.id,
         job: message.job,
-        timestamp: Date.now()
+        timestamp: Math.floor(Date.now() / 1000)
     };
     
     child = this.running_[message.job];
@@ -444,7 +444,7 @@ Orca.prototype.handleCancelCommand_ = function (message) {
         id: message.id,
         sender: this.config_.id,
         job: message.job,
-        timestamp: Date.now()
+        timestamp: Math.floor(Date.now() / 1000)
     };
     
     child = this.running_[message.job];
@@ -514,7 +514,7 @@ Orca.prototype.handleUnsupportedCommand_ = function (message) {
         id: message.id,
         sender: this.config_.id,
         job: message.job,
-        timestamp: Date.now(),
+        timestamp: Math.floor(Date.now() / 1000),
         error: {
             code: error.code,
             message: error.message
@@ -545,7 +545,7 @@ Orca.prototype.handleExecCommand_ = function (message) {
         id: message.id,
         sender: this.config_.id,
         job: message.job,
-        timestamp: Date.now()
+        timestamp: Math.floor(Date.now() / 1000)
     };
     
     C.async.waterfall([
