@@ -547,13 +547,14 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.done(result);
                 params.backends = result;
                 
-                action.data = {
+                log = {
                     id: C.uuid.v4(),
                     operator: 'create',
                     params: params,
                     timestamp: Date.now(),
                     group: params
                 };
+                action.data = log;
                 logger.start('Creating the operation log for creating group ' +
                              params.name + ' with params: ' +
                              C.lang.reflect.inspect(action.data));
@@ -865,13 +866,15 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.done();
                 group = status.group;
                 
-                action.data = {
+                log = {
                     id: C.uuid.v4(),
                     operator: 'apply',
                     params: params,
                     timestamp: Date.now(),
                     group: group
                 };
+                
+                action.data = log;
                 logger.start('Creating the operation log for applying new ' +
                              'strategy ' + 
                              C.lang.reflect.inspect(params.strategy) + 
@@ -990,13 +993,14 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.done();
                 group = status.group;
                 
-                action.data = {
+                log = {
                     id: C.uuid.v4(),
                     operator: 'delete',
                     params: params,
                     timestamp: Date.now(),
                     group: group
                 };
+                action.data = log;
                 logger.start('Creating the operation log for deleting  group ' + 
                              params.name);
                 action.acquire('data.publishing.group.operation.create', next);
