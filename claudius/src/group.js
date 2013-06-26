@@ -196,7 +196,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 
                 // The group is created successfully
                 if (log.operator === 'create') {
-                    status.state = GroupState.OK;
+                    status.state = GroupState.DONE;
                     next(null, status);
                     return;
                 }
@@ -265,10 +265,9 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                         } else {
                             logger.done(result);
                         }
+                        next(null, status);
                     }
                 );
-                
-                next(null, status);
             }
         ], function (error, status) {
             if (error) {
