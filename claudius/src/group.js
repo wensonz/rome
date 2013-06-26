@@ -58,7 +58,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                              params.name + '"');
                 
                 if (internal) { // the lock is supposed to have been acquired
-                    next(null, { acquired: true });
+                    next(null, { acquired: true }, null);
                     return;
                 }
                 
