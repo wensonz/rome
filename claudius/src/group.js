@@ -644,7 +644,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
 
                 logger.done();
                 group = status.group;
-                difference = group.scale - params.scale;
+                difference = params.scale - group.scale;
 
                 self.logger_.debug('Current scale of the group ' + params.name +
                                    ' is ' + group.scale + ', the difference ' +
@@ -732,9 +732,10 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.done(result);
                 
                 if (difference < 0) {
-                    self.logger_('Scaling group ' + group.name + 
-                                 ' in for scale ' + params.scale + 
-                                 ', no backend configuration updates needed');
+                    self.logger_.debug('Scaling group ' + group.name + 
+                                       ' in for scale ' + params.scale + 
+                                       ', no backend configuration ' +
+                                       'updates needed');
                     next(null, null);
                     return;
                 }
