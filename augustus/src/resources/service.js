@@ -10,9 +10,11 @@ Condotti.add('caligula.components.configuration.resources.service', function (C)
      * This ServiceResourceProcessor is designed to describe a managed service
      * to be run on the target nodes. A typical service resource is defined as
      * following:
-     * '${service name}': { // which is also the name of the script in init.d
-     *                      // or rc.d used to manage the service
+     * '${resource name}': { // descriptive resource name
      *     'type': 'service', // indicate this resource is a service resource
+     *     'name': '${service name}', // which is also the name of the script in 
+     *                                // init.d and rc.d used to manage the 
+     *                                // service
      *     'enable': true,
      *     'reload': true,
      *     'watch': [
@@ -67,7 +69,7 @@ Condotti.add('caligula.components.configuration.resources.service', function (C)
             service.push({ watch: resource.watch });
         }
         
-        salt[name] = {'service': service };
+        salt[resource.name] = {'service': service };
         
         path = C.natives.path.resolve(directory, name + '.sls');
         
