@@ -962,7 +962,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     name: params.name,
                     internal: true
                 };
-                action.acquire(action.name.replace(/apply$/, 'status'), next);
+                action.acquire(action.name.replace(/delete$/, 'status'), next);
             },
             function (status, unused, next) { // create operation log
                 logger.done(status);
@@ -1143,7 +1143,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     name: params.name,
                     internal: true
                 };
-                action.acquire(action.name.replace(/publish$/, 'status'), next);
+                action.acquire(action.name.replace(/pause$/, 'status'), next);
             },
             function (status, unused, next) { // Create an operation log
 
