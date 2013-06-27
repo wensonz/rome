@@ -748,8 +748,9 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 self.updateGroupBackendsConfiguration_(
                     action, group, params.backends, log, tag, next, 
                     function (state) {
-                        var failed = state.nodes.some(function (node) {
-                            var result = node.result;
+                        var failed = null;
+                        failed = Object.keys(state.nodes).some(function (node) {
+                            var result = state.nodes[node].result;
                             return !(result && 
                                      result.state === NodeState.EXITED && 
                                      result.code === 0);
