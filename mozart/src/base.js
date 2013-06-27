@@ -208,7 +208,8 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                     }
                     if ((result[node].error && 
                          result[node].error.code === 40800) ||
-                        result[node].result.state === NodeState.RUNNING) {
+                        (result[node].result && 
+                         result[node].result.state === NodeState.RUNNING)) {
                         completed = false;
                     }
                 });
