@@ -206,7 +206,9 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                         (result[node].error.code === 40800)) {
                         result[node] = job.state.nodes[node];
                     }
-                    if (result[node].result.state === NodeState.RUNNING) {
+                    if ((result[node].error && 
+                         result[node].error.code === 40800) ||
+                        result[node].result.state === NodeState.RUNNING) {
                         completed = false;
                     }
                 });
