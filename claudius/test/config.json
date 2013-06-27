@@ -1,0 +1,153 @@
+{
+    "condotti": {
+        "condotti.server.logging": { "log4js": {
+            "levels": {
+                "Condotti": "DEBUG",
+                "Kafka - API": "WARN"
+            },
+            "appenders": [{"type": "console"}]
+        }}
+    },
+    "dotti": {
+        "app": { "params": { "0": { "value": {
+            "middlewares": [
+                { "name": "connect.static", "config": ["/tmp/rome/files"] },
+                { "name": "connect.json" },
+                { "name": "multipart", "config": [ { "directory": "/tmp" } ]}
+            ]
+        }}}},
+        "router": {
+            "params": {
+                "0": { "value": {
+                    "data": "handlers.data",
+                    "file": "handlers.file",
+                    "counter": "handlers.counter",
+                    "configuration": "handlers.configuration",
+                    "configuration.tag": "handlers.configuration.tag",
+                    "configuration.generate": "handlers.configuration.generate",
+                    "lock": "handlers.lock",
+                    "orchestration": "handlers.orchestration",
+                    "package": "handlers.package",
+                    "publishing.group": "handlers.publishing.group"
+                }}
+            }
+        },
+        "handlers.publishing.group": {
+            "type": "caligula.handlers.publishing.GroupHandler",
+            "params": {}
+        },
+        "handlers.orchestration": {
+            "type": "caligula.handlers.OrchestrationHandler",
+            "params": {
+                "0": { "value": {
+                    "kafka": {
+                        "brokers": [{
+                            "id": 0, "host": "10.75.15.238", "port": 9092
+                        }],
+                        "compression": "gzip",
+                        "queueTime": 200,
+                        "batchSize": 1,
+                        "maxFetchDelay": 1000
+                    },
+                    "producer": {
+                        "partitions": { "consume": ["0-0"], "produce": ["0:1"] }
+                    },
+                    "consumer": {
+                        "partitions": { "consume": ["0-0"], "produce": ["0:1"] }
+                    },
+                    "id": "10.210.215.50",
+                    "timeout": 60000
+                }}
+            }
+        },
+        "handlers.package": {
+            "type": "caligula.handlers.PackageHandler",
+            "params": {}
+        },
+        "handlers.data": {
+            "type": "caligula.handlers.DataHandler",
+            "params": {
+                "0": { "value": {}},
+                "1": { "reference": "configuration-connection-factory" }
+            }
+        },
+        "handlers.file": {
+            "type": "caligula.handlers.FileHandler",
+            "params": {
+                "0": { "value": { 
+                    "directory": "/tmp/rome/files", 
+                    "baseUrl": "http://10.210.215.50:8080/" 
+                }}
+            }
+        },
+        "handlers.lock": {
+            "type": "caligula.handlers.LockHandler",
+            "params": {
+            }
+        },
+        "handlers.configuration": {
+            "type": "caligula.handlers.configuration.ConfigurationHandler",
+            "params": {
+            }
+        },
+        "handlers.configuration.tag": {
+            "type": "caligula.handlers.configuration.TagHandler",
+            "params": {
+            }
+        },
+        "handlers.configuration.generate": {
+            "type": "caligula.handlers.configuration.GenerationHandler",
+            "params": {
+                "0": { "value": {
+                    "root": "/tmp/rome/files/configuration"
+                }},
+                "1": { "reference": "dotti" }
+            }
+        },
+        "handlers.counter": {
+            "type": "caligula.handlers.CounterHandler",
+            "params": {
+            }
+        },
+        "configuration-connection-factory": {
+            "type": "caligula.db.mongo.MongoConnectionFactory",
+            "params": {
+                "0": { "value": {
+                    "url": "mongodb://stage-mongodb.rome.cluster.sina.com.cn:9010/wensonz"
+                }}
+            }
+        },
+        "configuration.merger": {
+            "type": "caligula.configuration.ConfigurationMerger",
+            "params": {}
+        },
+        "configuration.resources.file": {
+            "type": "caligula.configuration.resources.FileResourceProcessor",
+            "params": {}
+        },
+        "configuration.resources.package": {
+            "type": "caligula.configuration.resources.PackageResourceProcessor",
+            "params": {}
+        },
+        "configuration.resources.template": {
+            "type": "caligula.configuration.resources.TemplateResourceProcessor",
+            "params": {}
+        },
+        "configuration.resources.service": {
+            "type": "caligula.configuration.resources.ServiceResourceProcessor",
+            "params": {}
+        },
+        "configuration.filters.package": {
+            "type": "caligula.configuration.filters.PackagePrefilter",
+            "params": {}
+        },
+        "configuration.filters.loadbalancer": {
+            "type": "caligula.configuration.filters.LoadBalancerPrefilter",
+            "params": {
+                "0": { "value": {
+                    "root": "/usr/local/sinasrv2/etc/nginx/strategies"
+                }}
+            }
+        }
+    }
+}
