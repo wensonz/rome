@@ -15,9 +15,9 @@ Condotti.add('caligula.components.configuration.resources.service', function (C)
      *     'type': 'service', // indicate this resource is a service resource
      *     'enable': true,
      *     'reload': true,
-     *     'watch': {
-     *         'packages': ['${name of package}']
-     *     }
+     *     'watch': [
+     *         { 'pkg': '${name of package}' }
+     *     ]
      * }
      * 
      * @class ServiceResourceProcessor
@@ -53,18 +53,18 @@ Condotti.add('caligula.components.configuration.resources.service', function (C)
             path = null,
             service = ['rununing'],
             watch = null,
-            packages = null,
             salt = {};
-                
-        service.push({ enable: resource.enable });
-        service.push({ reload: resource.reload });
+        
+        if ('enable' in resource) {
+            service.push({ enable: resource.enable });
+        }
+        
+        if ('reload' in resource) {
+            service.push({ reload: resource.reload });
+        }
+        
         if (resource.watch) {
-            watch = [];
-            packages = resource.watch.packages || [];
-            packages.forEach(function (package) {
-                watch.push({ pkg: package });
-            });
-            service.push({ watch: watch });
+            service.push({ watch: service.watch });
         }
         
         salt[name] = {'service': service };
