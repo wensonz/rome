@@ -51,7 +51,7 @@ Condotti.add('caligula.components.configuration.resources.service', function (C)
             logger = C.logging.getStepLogger(this.logger_),
             params = action.data,
             path = null,
-            service = ['rununing'],
+            service = ['running'],
             watch = null,
             salt = {};
         
@@ -64,7 +64,7 @@ Condotti.add('caligula.components.configuration.resources.service', function (C)
         }
         
         if (resource.watch) {
-            service.push({ watch: service.watch });
+            service.push({ watch: resource.watch });
         }
         
         salt[name] = {'service': service };
