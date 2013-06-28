@@ -67,7 +67,7 @@ function run (config) {
                                           natives.path.resolve(__dirname,
                                                                '../src');
     // merge config for component loader
-    components = loader.paths.caligula.components;
+    components = loader.paths['caligula.components'];
     config.dotti['component-loader'].params['0'].value.root = components;
     
     // initialize Condotti instance
