@@ -1,0 +1,6 @@
+{
+    "name": "rome",
+    "version": "0.0.1",
+    "description": "HTTP-based API development framework and APIs for next generation of automated operating system based on Condotti framework and node.js",
+    "main": ""
+}
