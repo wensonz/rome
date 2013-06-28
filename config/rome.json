@@ -1,9 +1,5 @@
 {
     "condotti": {
-        "loader": { "paths": {
-            "caligula": "../src/caligula",
-            "caligula.components": "../src"
-        }},
         "condotti.server.logging": { "log4js": {
             "levels": {
                 "Condotti": "INFO",
@@ -58,7 +54,6 @@
             "type": "caligula.component.loaders.LocalComponentLoader",
             "params": {
                 "0": { "value": {
-                    "root": "../src",
                     "components": {
                         "configuration": "augustus",
                         "orchestration": "mozart",

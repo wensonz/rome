@@ -6,6 +6,7 @@
  * 
  * @module rome
  */
+var natives = require('natives');
 
 /**
  * The main function
@@ -13,8 +14,7 @@
  * @method main
  */
 function main() {
-    var natives = require('natives'),
-        startStopDaemon = require('start-stop-daemon'),
+    var startStopDaemon = require('start-stop-daemon'),
         path = null,
         config = null;
     //
@@ -52,8 +52,25 @@ function main() {
  */
 function run (config) {
     var condotti = require('condotti'),
+        loader = null,
+        components = null,
         C = null;
     
+    // merge the default configuration for loader
+    config.condotti.loader = config.condotti.loader || {};
+    loader = config.condotti.loader;
+    loader.paths = loader.paths || {};
+    loader.paths.caligula = loader.paths.caligula || natives.path.resolve(
+        __dirname, '../src/caligula'
+    );
+    loader.paths.caligula.components = loader.paths.caligula.components ||
+                                       natives.path.resolve(__dirname,
+                                                            '../src');
+    // merge config for component loader
+    components = loader.paths.caligula.components;
+    config.dotti['component-loader'].params['0'].value.root = components;
+    
+    // initialize Condotti instance
     C = condotti.Condotti(config.condotti);
     C.use(config.modules, function (error, unused) {
         var factory = null,
