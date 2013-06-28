@@ -5,6 +5,7 @@
     "bin": { "rome": "bin/rome.js" },
     "dependencies": {
         "condotti": "git://github.com/wensonz/condotti.git",
+        "natives": "*",
         "mkdirp": "*",
         "formidable": "*",
         "mongodb": "*",

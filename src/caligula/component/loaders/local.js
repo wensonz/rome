@@ -69,7 +69,7 @@ Condotti.add('caligula.component.loaders.local', function (C) {
         this.logger_ = C.logging.getObjectLogger(this);
         
         /* initialize */
-        this.initialize_();
+        // this.initialize_();
     }
     
     /**
@@ -89,12 +89,12 @@ Condotti.add('caligula.component.loaders.local', function (C) {
                     self.components_[name] = path;
                 }
             });
-            */
             this.config_.components = this.config_.components || {};
             Object.keys(this.config_.components).forEach(function (name) {
                 self.components_[name] = C.natives.path.resolve(
                     self.root_, self.config_.components[name]);
             });
+            */
         } catch (e) {
             this.logger_.debug('Normalizing components ' + 
                                C.lang.reflect.inspect(this.config_.components) +
@@ -132,15 +132,21 @@ Condotti.add('caligula.component.loaders.local', function (C) {
     LocalComponentLoader.prototype.load = function (name, callback) {
         var path = this.components_[name],
             json = null,
-            config = null;
+            config = null,
+            paths = null;
         
         // TODO: verify if the name exists
-        json = C.natives.path.resolve(path, 'component.json');
+        json = C.natives.path.resolve(this.root_, path, 'component.json');
         config = C.require(json);
         
         /* merge the dotti and routing into correct position */
         this.factory_.configure(config);
         
+        // A trick to update the path mapping of the loader
+        paths = {};
+        paths[this.namespace_ + '.' + name] = C.natives.path.resolve(this.root_, 
+                                                                     path);
+        C.loader_.configure({ paths: paths });
         // TODO: verify if component.js exists
         C.use(this.namespace_ + '.' + name + '.component', callback);
     };
