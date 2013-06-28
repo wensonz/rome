@@ -78,10 +78,19 @@ Condotti.add('caligula.component.loaders.local', function (C) {
      * @method initialize_
      */
     LocalComponentLoader.prototype.initialize_ = function () {
-        var self = this;
+        var self = this,
+            paths = {};
         
         // this.root_ = C.natives.path.resolve(this.root_);
         try {
+            Object.keys(this.components_).forEach(function (name) {
+                paths[self.namespace_ + '.' + name] = C.natives.path.resolve(
+                    self.root_, self.components_[name]
+                );
+            });
+            // A trick to update the path mapping of the loader
+            C.loader_.configure({ paths: paths });
+            
             /*
             C.natives.fs.readdirSync(this.root_).forEach(function (name) {
                 var path = C.natives.path.resolve(self.root_, name);
@@ -142,11 +151,6 @@ Condotti.add('caligula.component.loaders.local', function (C) {
         /* merge the dotti and routing into correct position */
         this.factory_.configure(config);
         
-        // A trick to update the path mapping of the loader
-        paths = {};
-        paths[this.namespace_ + '.' + name] = C.natives.path.resolve(this.root_, 
-                                                                     path);
-        C.loader_.configure({ paths: paths });
         // TODO: verify if component.js exists
         C.use(this.namespace_ + '.' + name + '.component', callback);
     };

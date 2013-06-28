@@ -67,7 +67,7 @@ Condotti.add('caligula.components.orca.app', function (C) {
      * @return {} 
      */
     OrcaApp.prototype.initialize_ = function () {
-        var Kafka = require('franz-kafka');
+        var Kafka = C.require('franz-kafka');
         
         this.logger_.info('Initializing Orca client "' + this.id +
                           '" with config ' + 
