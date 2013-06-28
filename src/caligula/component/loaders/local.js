@@ -69,7 +69,7 @@ Condotti.add('caligula.component.loaders.local', function (C) {
         this.logger_ = C.logging.getObjectLogger(this);
         
         /* initialize */
-        // this.initialize_();
+        this.initialize_();
     }
     
     /**
