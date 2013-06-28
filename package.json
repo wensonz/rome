@@ -4,7 +4,7 @@
     "description": "HTTP-based API development framework and APIs for next generation of automated operating system based on Condotti framework and node.js",
     "bin": { "rome": "bin/rome.js" },
     "dependencies": {
-        "condotti": "https://github.com/wensonz/condotti.git",
+        "condotti": "git://github.com/wensonz/condotti.git",
         "mkdirp": "*",
         "formidable": "*",
         "mongodb": "*",
@@ -13,6 +13,6 @@
         "start-stop-daemon": "*",
         "connect": "*",
         "dust": "*",
-        "franz-kafka": "https://github.com/dannycoates/franz-kafka.git"
+        "franz-kafka": "git://github.com/dannycoates/franz-kafka.git"
     }
 }
