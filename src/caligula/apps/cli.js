@@ -4,7 +4,6 @@
  * @module caligula.apps.cli
  */
 Condotti.add('caligula.apps.cli', function (C) {
-    //
     /**
      * This CliApp class implements the server-side CLI app
      *
@@ -19,40 +18,11 @@ Condotti.add('caligula.apps.cli', function (C) {
      *                        complete the processing of the request
      */
     function CliApp (config, contextualizer, router) {
-        /**
-         * The config object for this app
-         *
-         * @property config_
-         * @type Object
-         * @default {}
-         */
-        this.config_ = config || {}; 
-
-        /**
-         * The contextualizer to contextualize the incoming CLI request to
-         * Action instance for the further processing.
-         *
-         * @property contextualizer_
-         * @type Contextualizer
-         */
-        this.contextualizer_ = contextualizer;
-
-        /**
-         * The router used to route the HTTP request to correct handler
-         *
-         * @property router_
-         * @type Router
-         */
-        this.router_ = router;
-
-        /**
-         * The logger instance for this app
-         * 
-         * @property logger_
-         * @type Logger
-         */
-        this.logger_ = C.logging.getObjectLogger(this);
+        /* inheritance */
+        this.super(config, contextualizer, router);
     }
+    
+    C.lang.inherit(CliApp, C.caligula.apps.App);
 
     /**
      * Run this app instance
@@ -87,4 +57,4 @@ Condotti.add('caligula.apps.cli', function (C) {
     
     C.namespace('caligula.apps').CliApp = CliApp;
 
-}, '0.0.1', { requires: [] });
+}, '0.0.1', { requires: ['caligula.apps.base'] });

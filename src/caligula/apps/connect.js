@@ -22,40 +22,9 @@ Condotti.add('caligula.apps.connect', function (C) {
      *                        complete the processing of the request
      */
     function ConnectApp (config, contextualizer, router) {
-        /**
-         * The config object for this app
-         *
-         * @property config_
-         * @type Object
-         * @default {}
-         */
-        this.config_ = config || {}; // TODO: add default port and address
-
-        /**
-         * The contextualizer to contextualize the incoming HTTP request to
-         * Action instance for the further processing.
-         *
-         * @property contextualizer_
-         * @type Contextualizer
-         */
-        this.contextualizer_ = contextualizer;
-
-        /**
-         * The router used to route the HTTP request to correct handler
-         *
-         * @property router_
-         * @type Router
-         */
-        this.router_ = router;
-
-        /**
-         * The logger instance for this app
-         * 
-         * @property logger_
-         * @type Logger
-         */
-        this.logger_ = C.logging.getObjectLogger(this);
-
+        /* inheritance */
+        this.super(config, contextualizer, router);
+        
         /**
          * The port number this "connect" app is to listen on
          *
@@ -92,6 +61,8 @@ Condotti.add('caligula.apps.connect', function (C) {
          */
         this.running_ = false;
     }
+    
+    C.lang.inherit(ConnectApp, C.caligula.apps.App);
 
     /**
      * Run this app instance
@@ -182,4 +153,4 @@ Condotti.add('caligula.apps.connect', function (C) {
     
     C.namespace('caligula.apps').ConnectApp = ConnectApp;
 
-}, '0.0.1', { requires: [] });
+}, '0.0.1', { requires: ['caligula.apps.base'] });

@@ -1,3 +1,21 @@
 {
-    
+    "router": { "params": { "0": { "value": {
+        "publishing.group": "handlers.publishing.group"
+    }}}},
+    "handlers.publishing.group": {
+        "type": "caligula.handlers.publishing.GroupHandler",
+        "params": {}
+    },
+    "configuration.filters.package": {
+        "type": "caligula.configuration.filters.PackagePrefilter",
+        "params": {}
+    },
+    "configuration.filters.loadbalancer": {
+        "type": "caligula.configuration.filters.LoadBalancerPrefilter",
+        "params": {
+            "0": { "value": {
+                "root": "/usr/local/sinasrv2/etc/nginx/strategies"
+            }}
+        }
+    }
 }

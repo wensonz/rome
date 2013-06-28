@@ -1,1 +1,14 @@
-{}
+{
+    "router": { "params": { "0": { "value": {
+        "file": "handlers.file"
+    }}}},
+    "handlers.file": {
+        "type": "caligula.handlers.FileHandler",
+        "params": {
+            "0": { "value": { 
+                "directory": "/data1/rome/files",
+                "baseUrl": "http://10.210.215.50:8080/" 
+            }}
+        }
+    }
+}

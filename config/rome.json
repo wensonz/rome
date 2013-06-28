@@ -1,11 +1,15 @@
 {
     "condotti": {
+        "loader": { "paths": {
+            "caligula": "../src/caligula",
+            "caligula.components": "../src"
+        }},
         "condotti.server.logging": { "log4js": {
             "levels": {
                 "Condotti": "INFO",
                 "Kafka - API": "WARN"
             },
-            "appenders": [{"type": "console", "layout": {"type": "colored"}}]
+            "appenders": [{"type": "console", "layout": {"type": "basic"}}]
         }}
     },
     "modules": [
@@ -39,6 +43,33 @@
                 "1": { "reference": "contextualizer" },
                 "2": { "reference": "router" }
             }}
+        },
+        "contextualizer": {
+            "type": "caligula.contextualizers.HttpContextualizer",
+            "params": {}
+        },
+        "router": {
+            "type": "caligula.routing.Router",
+            "params": {
+                "1": { "reference": "dotti" }
+            }
+        },
+        "component-loader": {
+            "type": "caligula.component.loaders.LocalComponentLoader",
+            "params": {
+                "0": { "value": {
+                    "root": "../src",
+                    "components": {
+                        "configuration": "augustus",
+                        "orchestration": "mozart",
+                        "data": "vatican",
+                        "file": "vespasia",
+                        "package": "galba",
+                        "publishing": "claudius"
+                    }
+                }},
+                "1": { "reference": "dotti" }
+            }
         }
     }
 }

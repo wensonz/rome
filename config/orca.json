@@ -1,0 +1,41 @@
+{
+    "condotti": {
+        "loader": { "paths": {
+            "caligula": "../src/caligula",
+            "caligula.components": "../src"
+        }},
+        "condotti.server.logging": { "log4js": {
+            "levels": {
+                "Condotti": "INFO",
+                "Kafka - ORCA": "WARN"
+            },
+            "appenders": [{"type": "console", "layout": {"type": "basic"}}]
+        }}
+    },
+    "modules": [
+        "caligula.errors.http",
+        "caligula.routing.router",
+        "caligula.component.loaders.local"
+    ],
+    "dotti": {
+        "router": {
+            "type": "caligula.routing.Router",
+            "params": {
+                "1": { "reference": "dotti" }
+            }
+        },
+        "component-loader": {
+            "type": "caligula.component.loaders.LocalComponentLoader",
+            "params": {
+                "0": { "value": {
+                    "root": "../src",
+                    "components": {
+                        "orca": "titus",
+                        "orchestration": "mozart"
+                    }
+                }},
+                "1": { "reference": "dotti" }
+            }
+        }
+    }
+}

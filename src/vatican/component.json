@@ -1,1 +1,18 @@
-{}
+{
+    "router": { "params": { "0": { "value": {
+        "data": "handlers.data"
+    }}}},
+    "handlers.data": {
+        "type": "caligula.handlers.DataHandler",
+        "params": {
+            "0": { "value": {}},
+            "1": { "reference": "data-connection-factory" }
+        }
+    },
+    "data-connection-factory": {
+        "type": "caligula.db.mongo.MongoConnectionFactory",
+        "params": { "0": { "value": {
+            "url": "mongodb://stage-mongodb.rome.cluster.sina.com.cn:9010/rome"
+        }}}
+    }
+}

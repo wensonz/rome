@@ -1,1 +1,54 @@
-{}
+{
+    "router": { "params": { "0": { "value": {
+        "counter": "handlers.counter",
+        "configuration": "handlers.configuration",
+        "configuration.tag": "handlers.configuration.tag",
+        "configuration.generate": "handlers.configuration.generate",
+        "lock": "handlers.lock"
+    }}}},
+    "handlers.lock": {
+        "type": "caligula.handlers.LockHandler",
+        "params": {}
+    },
+    "handlers.configuration": {
+        "type": "caligula.handlers.configuration.ConfigurationHandler",
+        "params": {}
+    },
+    "handlers.configuration.tag": {
+        "type": "caligula.handlers.configuration.TagHandler",
+        "params": {}
+    },
+    "handlers.configuration.generate": {
+        "type": "caligula.handlers.configuration.GenerationHandler",
+        "params": {
+            "0": { "value": {
+                "root": "/data1/rome/files/configuration"
+            }},
+            "1": { "reference": "dotti" }
+        }
+    },
+    "handlers.counter": {
+        "type": "caligula.handlers.CounterHandler",
+        "params": {}
+    },
+    "configuration.merger": {
+        "type": "caligula.configuration.ConfigurationMerger",
+        "params": {}
+    },
+    "configuration.resources.file": {
+        "type": "caligula.configuration.resources.FileResourceProcessor",
+        "params": {}
+    },
+    "configuration.resources.package": {
+        "type": "caligula.configuration.resources.PackageResourceProcessor",
+        "params": {}
+    },
+    "configuration.resources.template": {
+        "type": "caligula.configuration.resources.TemplateResourceProcessor",
+        "params": {}
+    },
+    "configuration.resources.service": {
+        "type": "caligula.configuration.resources.ServiceResourceProcessor",
+        "params": {}
+    }
+}

@@ -1,1 +1,9 @@
-{}
+{
+    "router": { "params": { "0": { "value": {
+        "package": "handlers.package"
+    }}}},
+    "handlers.package": {
+        "type": "caligula.handlers.PackageHandler",
+        "params": {}
+    }
+}

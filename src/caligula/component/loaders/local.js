@@ -80,17 +80,25 @@ Condotti.add('caligula.component.loaders.local', function (C) {
     LocalComponentLoader.prototype.initialize_ = function () {
         var self = this;
         
-        this.root_ = C.natives.path.resolve(this.root_);
-        
+        // this.root_ = C.natives.path.resolve(this.root_);
         try {
+            /*
             C.natives.fs.readdirSync(this.root_).forEach(function (name) {
                 var path = C.natives.path.resolve(self.root_, name);
                 if (C.natives.fs.statSync(path).isDirectory()) {
                     self.components_[name] = path;
                 }
             });
+            */
+            this.config_.components = this.config_.components || {};
+            Object.keys(this.config_.components).forEach(function (name) {
+                self.components_[name] = C.natives.path.resolve(
+                    self.root_, self.config_.components[name]);
+            });
         } catch (e) {
-            this.logger_.debug('Searching components under ' + this.root_ + 
+            this.logger_.debug('Normalizing components ' + 
+                               C.lang.reflect.inspect(this.config_.components) +
+                               ' under ' + this.root_ + 
                                ' failed. Error: ' + C.lang.reflect.inspect(e));
             throw e;
         }

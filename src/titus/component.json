@@ -1,9 +1,9 @@
 {
     "router": { "params": { "0": { "value": {
-        "orchestration": "handlers.orchestration"
+        "orca": "handlers.orca"
     }}}},
-    "handlers.orchestration": {
-        "type": "caligula.handlers.OrchestrationHandler",
+    "app": {
+        "type": "caligula.apps.OrcaApp",
         "params": {
             "0": { "value": {
                 "kafka": {
@@ -21,9 +21,20 @@
                 "consumer": {
                     "partitions": { "consume": ["0-0"], "produce": ["0:1"] }
                 },
-                "id": "10.210.215.50",
-                "timeout": 60000
-            }}
+                "id": "10.210.213.51"
+            }},
+            "1": { "reference": "contextualizer" },
+            "2": { "reference": "router" }
         }
+    },
+    "contextualizer": {
+        "type": "caligula.contextualizers.OrcaContextualizer",
+        "params": {}
+    },
+    "handlers.orca": {
+        "type": "caligula.handlers.OrcaHandler",
+        "params": { "0": { "value": {
+            "root": "/data1/rome/jobs/"
+        }}}
     }
 }
