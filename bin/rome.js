@@ -63,9 +63,9 @@ function run (config) {
     loader.paths.caligula = loader.paths.caligula || natives.path.resolve(
         __dirname, '../src/caligula'
     );
-    loader.paths.caligula.components = loader.paths.caligula.components ||
-                                       natives.path.resolve(__dirname,
-                                                            '../src');
+    loader.paths['caligula.components'] = loader.paths['caligula.components'] ||
+                                          natives.path.resolve(__dirname,
+                                                               '../src');
     // merge config for component loader
     components = loader.paths.caligula.components;
     config.dotti['component-loader'].params['0'].value.root = components;
