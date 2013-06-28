@@ -1,7 +1,4 @@
 {
-    "router": { "params": { "0": { "value": {
-        "orchestration": "handlers.orchestration"
-    }}}},
     "handlers.orchestration": {
         "type": "caligula.handlers.OrchestrationHandler",
         "params": {
