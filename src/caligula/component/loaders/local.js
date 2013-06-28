@@ -58,7 +58,7 @@ Condotti.add('caligula.component.loaders.local', function (C) {
          * @type Object
          * @deafult {}
          */
-        this.components_ = {};
+        this.components_ = this.config_.components || {};
         
         /**
          * The logger instance for this loader

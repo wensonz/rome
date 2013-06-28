@@ -19,7 +19,9 @@ function main() {
         config = null;
     //
     try {
-        path = natives.path.resolve(__dirname, '../config/rome.json');
+        // config.json is expected to be a link to rome.json for API server
+        // and orca.json for client
+        path = natives.path.resolve(__dirname, '../config/config.json');
         config = require(path);
     } catch (e) {
         process.stderr.write('Loading config from file ' + path + 
