@@ -364,7 +364,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
 
                 logger.done();
                 group = status.group;
-
+                
                 logger.start('Creating publishing operation log for group ' + 
                              params.name);
                 log = { 
@@ -374,13 +374,28 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     params: params,
                     timestamp: Date.now()
                 };
-
+                
                 action.data = log;
                 action.acquire('data.publishing.group.operation.create', next);
             },
             function (result, unused, next) { // Update the group data
+                var package = null;
+                
                 logger.done(result);
-
+                
+                if (!params.package) {
+                    package = group.package || { 
+                        name: 'trunk', version: 'latest'
+                    };
+                    
+                    self.logger_.warn('No package is specified in params, ' +
+                                      'current configured package ' +
+                                      package.name + '@' + package.version +
+                                      ' is to be used');
+                    next(null, null, null);
+                    return;
+                }
+                
                 action.data = {
                     criteria: { name: params.name },
                     update: { '$set': {
@@ -390,28 +405,28 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.start('Updating the package for group ' + params.name +
                              ' to ' + params.package.name + '@' + 
                              params.package.version);
-
+                
                 action.acquire('data.publishing.group.update', next);
             },
             function (result, unused, next) { // Create configuration TAG
-                logger.done(result);
+                if (result) {
+                    logger.done(result);
+                }
                 
                 // Update the package field for calling updateBackends_
                 group.package = params.package;
-
+                
                 tag = 'TAG_GROUP_' + params.name.toUpperCase() + 
                       '_PUBLISH@' + Date.now().toString();
-
+                      
                 logger.start('Tagging the new configuration for group ' +
                              params.name + ' with tag ' + tag);
-
+                
                 action.data = { name: tag };
                 action.acquire('configuration.tag.create', next);
             },
             function (result, unused, next) { // Creat orchestration job
-                
                 logger.done(result);
-                
                 logger.start('Sending notification to update the package on ' +
                              'backends ' + group.backends.toString() + 
                              ' of group ' + params.name);
@@ -432,8 +447,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             });
         });
     };
-
-
+    
+    
     /**
      * Create a new group with the specified params.
      *
