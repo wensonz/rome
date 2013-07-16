@@ -56,7 +56,7 @@ Condotti.add('caligula.components.configuration.resources.package', function (C)
                 action.data = { criteria: {
                     name: resource.name,
                     version: resource.version
-                };
+                }};
                 action.acquire('package.read', next);
             },
             function (result, unused, next) { // save the generated content into sls
@@ -89,7 +89,7 @@ Condotti.add('caligula.components.configuration.resources.package', function (C)
                 
                 logger.start('Saving the generated content ' + 
                              C.lang.reflect.inspect(salt) +
-                             + ' into file ' + path);
+                             ' into file ' + path);
                              
                 C.natives.fs.writeFile(
                     path, JSON.stringify(salt, null, 4), next

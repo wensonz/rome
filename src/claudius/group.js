@@ -16,13 +16,6 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     
     var JobState = C.namespace('caligula.orchestration').JobState;
     var NodeState = C.namespace('caligula.orchestration').NodeState;
-    /**
-     * The default timeout settings for lock lease, or orchestration timeout
-     *
-     * @property DEFAULT_TIMEOUTS
-     * @type Object
-     */
-    var DEFAULT_TIMEOUTS = ;
     
     /**
      * This GroupHandler class is a child class of Handler, and designed to
@@ -264,7 +257,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 status.state = running ? GroupState.RUNNING : GroupState.DONE;
 
                 if (status.state === GroupState.DONE) { 
-                    if (status.operator === 'delete')) {
+                    if (status.operator === 'delete') {
                         next(new C.caligula.errors.GroupNotFoundError(
                             'Required group ' + params.name + ' does not exist'
                         ));
@@ -514,6 +507,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             params = action.data,
             locks = null,
             group = null,
+            log = null,
+            tag = null,
             logger = C.logging.getStepLogger(this.logger_);
 
         C.async.waterfall([

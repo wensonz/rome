@@ -107,7 +107,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
      */
     OrchestrationHandler.prototype.initialize_ = function () {
         var Kafka = C.require('franz-kafka'),
-            config = null
+            config = null,
             self = this;
         
         config = this.config_.kafka;
@@ -266,7 +266,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
             }
             
             action.done(job.state);
-        })
+        });
     };
     
     /**
@@ -390,6 +390,8 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                 action.acquire('data.orchestration.update', next);
             },
             function (result, unused, next) {
+                var message = null;
+
                 logger.done(result);
                 
                 // TODO: check if result.affected === 1
@@ -499,8 +501,9 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
      * @param {Object} dispatch the dispatch object which timeout
      */
     OrchestrationHandler.prototype.onDispatchTimeout_ = function (dispatch) {
-        var error = new C.caligula.errors.RequestTimeoutError('Request timeout');
-        
+        var error = null;
+
+        error = new C.caligula.errors.RequestTimeoutError('Request timeout');
         this.logger_.warn('Request ' + dispatch.id + ' for job ' + 
                           C.lang.reflect.inspect(dispatch.job) + 
                           ' timeout. Result: ' +
@@ -516,7 +519,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
             }};
         });
         
-        delete self.dispatching_[dispatch.id];
+        delete this.dispatching_[dispatch.id];
         
         if (!dispatch.callback) {
             return;
@@ -615,7 +618,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
             return;
         }
         
-        if (message.timestamp <= self.uptime_) {
+        if (message.timestamp <= this.uptime_) {
             this.logger_.debug('Discard expired message received: ' +
                                C.lang.reflect.inspect(message));
             return;

@@ -187,7 +187,7 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
                         });
                         strategies.geo.push({
                             city: group.strategy.city,
-                            path: C.natives.path.resolve(self.root_, 'geo'
+                            path: C.natives.path.resolve(self.root_, 'geo',
                                                          group.strategy.city),
                             group: key
                         });
