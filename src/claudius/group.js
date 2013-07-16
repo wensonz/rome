@@ -243,10 +243,10 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 status.group = group; // current group object, or the snapshot
                                       // one in a 'delete' operation
                 
-                if (!jobs) { // orchestration job not created
-                             // Since all operations require orchestration's
-                             // help, it's supposed to be failed if there is no
-                             // job created and the lock is not locked
+                if (!jobs) { // orchestration jobs not created
+                    // Since all operations require orchestration's
+                    // help, it's supposed to be failed if there is no
+                    // job created and the lock is not locked
                     status.state = (!internal && locked) ? GroupState.RUNNING : 
                                                            GroupState.FAILED;
                     // There is no 'details' property in the result status
@@ -262,14 +262,19 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                            state.job === JobState.CANCELLING;
                 });
                 status.state = running ? GroupState.RUNNING : GroupState.DONE;
-                
-                // group has been successfully deleted
-                if ((status.state === GroupState.DONE) && 
-                    (status.operator === 'delete')) {
-                    next(new C.caligula.errors.GroupNotFoundError(
-                        'Required group ' + params.name + ' does not exist'
-                    ));
-                    return;
+
+                if (status.state === GroupState.DONE) { 
+                    if (status.operator === 'delete')) {
+                        next(new C.caligula.errors.GroupNotFoundError(
+                            'Required group ' + params.name + ' does not exist'
+                        ));
+                        return;
+                    }
+
+                    if (jobs.length !== log.jobs) {
+                        failed = true; // operation failed due to the creation
+                                       // of some orchestration job failed
+                    }
                 }
                 
                 //
@@ -288,6 +293,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                                //       error type
                     });
                 });
+
+
                 // Group is supposed to be failed even if a single failure
                 // occurs on a backend/nginx
                 if (failed) {
@@ -418,7 +425,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     group: group,
                     operator: 'publish',
                     params: params,
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    jobs: 1
                 };
 
                 action.data = log;
@@ -590,7 +598,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     operator: 'create',
                     params: params,
                     timestamp: Date.now(),
-                    group: group
+                    group: group,
+                    jobs: 1
                 };
 
                 action.data = log;
@@ -660,6 +669,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             log = null,
             tag = null,
             difference = null,
+            allocated = null,
             logger = C.logging.getStepLogger(this.logger_);
         
         C.async.waterfall([
@@ -732,8 +742,9 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 
                 if (result) {
                     logger.done(result);
+                    allocated = result;
                     // params.backends === allocated backends after scaling
-                    params.backends = group.backends.concat(result);
+                    params.backends = group.backends.concat(allocated);
                 }
                 
                 if (difference < 0) {
@@ -757,7 +768,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     group: group,
                     operator: 'scale',
                     params: params,
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    jobs: 2 // requires 2 orchestration jobs
                 };
 
                 action.data = log;
@@ -807,7 +819,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                              params.name);
                              
                 self.updateBackends_(
-                    action, group, params.backends, log, tag, next, 
+                    action, group, allocated, log, tag, next, 
                     function (state) {
                         var failed = null;
                         failed = Object.keys(state.nodes).some(function (node) {
@@ -932,7 +944,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     operator: 'apply',
                     params: params,
                     timestamp: Date.now(),
-                    group: group
+                    group: group,
+                    jobs: 1
                 };
                 
                 action.data = log;
@@ -1068,7 +1081,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     operator: 'delete',
                     params: params,
                     timestamp: Date.now(),
-                    group: group
+                    group: group,
+                    jobs: 1
                 };
                 action.data = log;
                 logger.start('Creating the operation log for deleting  group ' + 
@@ -1251,7 +1265,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     group: group,
                     operator: params.pause ? 'pause' : 'resume',
                     params: params,
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    jobs: 1
                 };
 
                 action.data = log;

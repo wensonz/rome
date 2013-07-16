@@ -143,7 +143,14 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
             try {
                 result.data.forEach(function (group, index) {
                     key = 'G' + (index + 1);
-                
+                    
+                    if (group.pause) {
+                        self.logger_.warn('Group ' + group.name + 
+                                          ' is paused now, nothing is to be ' +
+                                          'generated');
+                        return;
+                    }
+
                     if (!group.strategy) {
                         // TODO: unique the backends
                         defaults.members = defaults.members.concat(
