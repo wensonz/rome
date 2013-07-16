@@ -886,6 +886,23 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             function (result, unused, next) {
                 logger.done(result);
                 
+                if (!params.strategy) {
+                    if (group.strategy) {
+                        self.logger_.debug('Configuration of the load ' +
+                                           'balancers of group ' + group.name +
+                                           ' are to be generated again with ' +
+                                           'the current strategy ' +
+                                           C.lang.reflect.inspect(group.strategy));
+                    } else {
+                        self.logger_.debug('Backends of group ' + group.name + 
+                                           ' are to be onboard into the ' +
+                                           'default upstream due to the empty' +
+                                           ' strategy received.');
+                    }
+                    next(null, null, null);
+                    return;
+                }
+
                 logger.start('Update the strategy of group ' + params.name +
                              ' from ' + C.lang.reflect.inspect(group.strategy) +
                              ' to ' + C.lang.reflect.inspect(params.strategy));
@@ -899,7 +916,9 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 action.acquire('data.publishing.group.update', next);
             },
             function (result, unused, next) { // Create configuration TAG
-                logger.done(result);
+                if (result) {
+                    logger.done(result);
+                }
                 
                 tag = 'TAG_GROUP_' + params.name.toUpperCase() + 
                       '_APPLY@' + Date.now().toString();
