@@ -396,6 +396,9 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             function (result, unused, next) { // Create configuration TAG
                 logger.done(result);
                 
+                // Update the package field for calling updateBackends_
+                group.package = params.package;
+
                 tag = 'TAG_GROUP_' + params.name.toUpperCase() + 
                       '_PUBLISH@' + Date.now().toString();
 
@@ -406,46 +409,15 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 action.acquire('configuration.tag.create', next);
             },
             function (result, unused, next) { // Creat orchestration job
-                var updateLoadBalancers = null;
                 
                 logger.done(result);
-                
-                if (!group.package) { // the first time group is published
-                    updateLoadBalancers = function (state) {
-                        var failed = null;
-                        failed = Object.keys(state.nodes).some(function (name) {
-                            var result = state.nodes[name].result;
-                            return !(result && 
-                                     result.state === NodeState.EXITED && 
-                                     result.code === 0);
-                        });
-                        if (failed) {
-                            self.logger_.error('Updating package on new ' +
-                                               'allocated backends ' +
-                                               group.backends.toString() +
-                                               ' for group ' + params.name +
-                                               ' failed. Status: ' + state);
-                            return;
-                        }
-                        
-                        logger.start('Sending notification to update the ' +
-                                     'loadbalancers affected by group ' +
-                                     params.name + ' of ISP ' + group.isp);
-                         
-                        self.updateLoadBalancers_(action, group, log, tag);
-                    };
-                }
-                
-                // Update the package field for calling
-                // updateBackends_
-                group.package = params.package;
                 
                 logger.start('Sending notification to update the package on ' +
                              'backends ' + group.backends.toString() + 
                              ' of group ' + params.name);
                              
                 self.updateBackends_(action, group, group.backends, log, tag, 
-                                     next, updateLoadBalancers);
+                                     next);
             }
         ], function (error, result) {
             self.unlockGroupAndBackends_(action, locks, function () {
@@ -508,7 +480,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             function (status, unused, next) { // check group status if existing
                 
                 if (!status) { // group not exist before
-                    next()
+                    next();
                     return;
                 }
 
@@ -1009,15 +981,6 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 // Group was tried to be deleted, but failed. If the deleting
                 // operation succeeds, "status" API will return a 
                 // GroupNotFoundError, which will cause the flow ended
-                /*
-                if (status.operator === 'delete') {
-                    next(new C.caligula.errors.GroupGoneError(
-                        'Required group ' + params.name + 
-                        ' has been or is gonna be deleted'
-                    ));
-                    return;
-                }
-                */
                 
                 logger.done();
                 group = status.group;
