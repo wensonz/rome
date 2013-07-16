@@ -164,7 +164,7 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
                             upstream: group.name
                         });
                         path = C.natives.path.resolve(
-                            self.root_, group.strategy.file
+                            self.root_, 'uid', group.strategy.file
                         );
                         strategies.uid.push(
                             'weibo_uid_match_rule ' + key + ' "' + path + '"'
@@ -173,14 +173,14 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
                                               path, group.strategy.file);
                     
                         break;
-                    case 'IP-RANGE':
+                    case 'IP-RANGE': // TODO: rename to 'GEO'
                         mapping.geo.push({
                             group: key,
                             upstream: group.name
                         });
                         strategies.geo.push({
                             city: group.strategy.city,
-                            path: C.natives.path.resolve(self.root_, 
+                            path: C.natives.path.resolve(self.root_, 'geo'
                                                          group.strategy.city),
                             group: key
                         });
