@@ -195,13 +195,15 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 status.group = group; // current group object, or the snapshot
                                       // one in a 'delete' operation
                 
+                // Now that all operations require the help of orchestration
+                /*
                 // The group is created successfully
                 if (log.operator === 'create') {
                     status.state = GroupState.DONE;
                     next(null, status);
                     return;
                 }
-                
+                */
 
                 if (!jobs) { // orchestration job not created
                              // Since all operations require orchestration's
@@ -410,12 +412,12 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 action.acquire('configuration.tag.create', next);
             },
             function (result, unused, next) { // Creat orchestration job
-                var updateLoadBalancer = null;
+                var updateLoadBalancers = null;
                 
                 logger.done(result);
                 
                 if (!group.package) { // the first time group is published
-                    updateLoadBalancer = function (state) {
+                    updateLoadBalancers = function (state) {
                         var failed = null;
                         failed = Object.keys(state.nodes).some(function (name) {
                             var result = state.nodes[name].result;
@@ -436,23 +438,20 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                                      'loadbalancers affected by group ' +
                                      params.name + ' of ISP ' + group.isp);
                          
-                        self.updateLoadBalancerConfiguration_(action, group, 
-                                                              log, tag);
+                        self.updateLoadBalancers_(action, group, log, tag);
                     };
                 }
                 
                 // Update the package field for calling
-                // updateGroupBackendsConfiguration_
+                // updateBackends_
                 group.package = params.package;
                 
                 logger.start('Sending notification to update the package on ' +
                              'backends ' + group.backends.toString() + 
                              ' of group ' + params.name);
                              
-                self.updateGroupBackendsConfiguration_(
-                    action, group, group.backends, log, tag, next, 
-                    updateLoadBalancer
-                );
+                self.updateBackends_(action, group, group.backends, log, tag, 
+                                     next, updateLoadBalancers);
             }
         ], function (error, result) {
             self.unlockGroupAndBackends_(action, locks, function () {
@@ -486,8 +485,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             function (next) { // Lock the group and backends
                 logger.start('Acquiring the lock on on group ' + params.name +
                              ' and backends for resource allocation');
+
                 self.lockGroupAndBackends_(action, params.name, true, next);
-                // self.lock_(action, 'publishing.group.' + params.name, next);
             },
             function (result, next) { // Read current status of the group
                 var name = null;
@@ -512,59 +511,61 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     next(error, result, null);
                 });
             },
-            function (status, unused, next) { // allocate the backend servers
+            function (status, unused, next) { // check group status if existing
                 
-                // TODO: call next directly when !status?
-                if (status) {
-                    
-                    logger.done(status);
-                
-                    logger.start('Checking if the group ' + params.name + 
-                                 ' is available for creating');
-                             
-                    if (status.state === GroupState.RUNNING) {
-                        next(new C.caligula.errors.OperationConflictError(
-                            'Another "' + status.operator + '" operation is ' +
-                            'now running on the specified group ' + params.name
-                        ));
-                        return;
-                    }
+                if (!status) { // group not exist before
+                    next()
+                    return;
+                }
 
-                    // Group was tried to be deleted, but failed. If the deleting
-                    // operation succeeds, "status" API will return a 
-                    // GroupNotFoundError, which will cause the flow ended
-                    if (status.operator !== 'delete') {
-                        next(new C.caligula.errors.GroupAlreadyExistError(
-                            'Required group ' + params.name + 
-                            ' has already existed'
-                        ));
-                        return;
-                    }
+                logger.done(status);
                 
-                    logger.done();
-                } // END OF if (status)
+                logger.start('Checking if the group ' + params.name + 
+                             ' is available for creating');
+                         
+                if (status.state === GroupState.RUNNING) {
+                    next(new C.caligula.errors.OperationConflictError(
+                        'Another "' + status.operator + '" operation is ' +
+                        'now running on the specified group ' + params.name
+                    ));
+                    return;
+                }
+
+                // Group was tried to be deleted, but failed. If the deleting
+                // operation succeeds, "status" API will return a 
+                // GroupNotFoundError, which will cause the flow ended
+                if (status.operator !== 'delete') {
+                    next(new C.caligula.errors.GroupAlreadyExistError(
+                        'Required group ' + params.name + 
+                        ' has already existed'
+                    ));
+                    return;
+                }
                 
+                logger.done();
+                next();
+
+            }, function (next) { // allocate backends
+
                 logger.start('Trying to allocate backend servers of ISP ' +
                              params.isp + ' at scale ' + params.scale);
                 
                 self.allocateBackends_(action, params.isp, params.scale, next);
             },
             function (result, next) { // create operation log
-                var groups = null,
-                    backends = {},
-                    available = null,
-                    required = 0;
                 
                 logger.done(result);
                 params.backends = result;
-                
+                group = params;
+
                 log = {
                     id: C.uuid.v4(),
                     operator: 'create',
                     params: params,
                     timestamp: Date.now(),
-                    group: params
+                    group: group
                 };
+
                 action.data = log;
                 logger.start('Creating the operation log for creating group ' +
                              params.name + ' with params: ' +
@@ -576,8 +577,32 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 
                 logger.start('Creating the data object for group ' + 
                              params.name);
-                action.data = params;
+
+                action.data = group;
                 action.acquire('data.publishing.group.create', next);
+            },
+            function (result, unused, next) {
+                logger.done(result);
+
+                tag = 'TAG_GROUP_' + params.name.toUpperCase() + 
+                      '_CREATE@' + Date.now().toString();
+
+                logger.start('Tagging the new configuration for group ' +
+                             params.name + ' with tag ' + tag);
+
+                action.data = { name: tag };
+                action.acquire('configuration.tag.create', next);
+            },
+            function (result, unused, next) { // Creat orchestration job
+                
+                logger.done(result);
+                
+                logger.start('Sending notification to update the package on ' +
+                             'backends ' + group.backends.toString() + 
+                             ' of group ' + params.name);
+                             
+                self.updateBackends_(action, group, group.backends, log, tag, 
+                                     next);
             }
         ], function (error, result) {
             
@@ -756,7 +781,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                              params.backends.toString() + ' of group ' + 
                              params.name);
                              
-                self.updateGroupBackendsConfiguration_(
+                self.updateBackends_(
                     action, group, params.backends, log, tag, next, 
                     function (state) {
                         var failed = null;
@@ -779,8 +804,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                                      'loadbalancers affected by group ' +
                                      params.name + ' of ISP ' + group.isp);
                          
-                        self.updateLoadBalancerConfiguration_(action, group, 
-                                                              log, tag);
+                        self.updateLoadBalancers_(action, group, log, tag);
                     }
                 );
             },
@@ -795,8 +819,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                              'loadbalancers affected by group ' +
                              params.name + ' of ISP ' + group.isp);
                          
-                self.updateLoadBalancerConfiguration_(action, group, log, 
-                                                      tag, next);
+                self.updateLoadBalancers_(action, group, log, tag, next);
             }
         ], function (error, result) {
             self.unlockGroupAndBackends_(action, locks, function () {
@@ -929,8 +952,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                              C.lang.reflect.inspect(params.strategy) + 
                              ' on group ' + params.name);
                 
-                self.updateLoadBalancerConfiguration_(action, group, log, tag, 
-                                                      next);
+                self.updateLoadBalancers_(action, group, log, tag, next);
             }
         ], function (error, result) {
             self.unlockGroupAndBackends_(action, locks, function () {
@@ -1045,8 +1067,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.start('Sending notification to loadbalancers to remove' +
                              ' the group ' + params.name);
                              
-                self.updateLoadBalancerConfiguration_(action, group, log, tag, 
-                                                      next);
+                self.updateLoadBalancers_(action, group, log, tag, next);
             }
         ], function (error, result) {
             self.unlockGroupAndBackends_(action, locks, function () {
@@ -1548,7 +1569,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     /**
      * Update the configuration for the backends belong to the specified group
      *
-     * @method updateGroupBackendsConfiguration_
+     * @method updateBackends_
      * @param {Action} action the action trigger this update
      * @param {Object} group the group configurations for whose backends are
      *                       to be updated
@@ -1569,27 +1590,33 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      *                            The signature of the callback function is
      *                            'function (state) {}'
      */
-    GroupHandler.prototype.updateGroupBackendsConfiguration_ = function (action, group, backends, log, tag, created, done) {
+    GroupHandler.prototype.updateBackends_ = function (action, group, backends, 
+                                                       log, tag, created, done) {
         var self = this,
-            logger = C.logging.getStepLogger(this.logger_);
+            logger = C.logging.getStepLogger(this.logger_),
+            package = null;
         
+
+        package = group.package || { name: 'trunk', version: 'latest' };
         logger.start('Creating orchestration job for publishing ' +
-                     group.package.name + '@' + 
-                     group.package.version + ' onto ' + 
+                     package.name + '@' + package.version + ' onto ' + 
                      group.backends.toString() + ' of group ' +
                      group.name);
         
         action.data = {
-            nodes: group.backends,
+            nodes: backends,
+            // TODO: make this command configurable
             command: '/usr/local/sinasrv2/sbin/rome-config-sync',
             arguments: [tag],
             timeout: 15 * 60 * 1000, // 15 min
+                                     // TODO: make timeout configurable
             extras: {
                 group: group.name, 
                 operation: log.id, 
                 affected: 'backends'
             }
         };
+
         action.acquire('orchestration.create', function (error, result) {
             var timer = null,
                 id = null;
@@ -1608,7 +1635,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             }
             
             id = result.id;
-            timer = setInterval(function () {
+            timer = setInterval(function () { // periodically check stat of the
+                                              // orchestration job
                 action.data = { id: id };
                 action.acquire('orchestration.stat', function (error, state) {
                     if (error || state.job === JobState.RUNNING) {
@@ -1619,6 +1647,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     done(state);
                 });
             }, 5000); // every 5 sec
+            // TODO: make the '5000' interval configurable
         });
     };
     
@@ -1627,7 +1656,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      * Update the configuration for the load balancers belong to the specified
      * isp
      *
-     * @method updateLoadBalancerConfiguration_
+     * @method updateLoadBalancers_
      * @param {Action} action the action trigger this update
      * @param {Object} group the group configurations for whose backends are
      *                       to be updated
@@ -1640,7 +1669,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      *                            The signature of the callback function is
      *                            'function (error) {}'
      */
-    GroupHandler.prototype.updateLoadBalancerConfiguration_ = function (action, group, log, tag, callback) {
+    GroupHandler.prototype.updateLoadBalancers_ = function (action, group, log, 
+                                                            tag, callback) {
         var self = this,
             logger = C.logging.getStepLogger(this.logger_);
             
@@ -1652,6 +1682,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.start('Reading load balancers for ISP ' + group.isp);
                 action.data = { criteria: {
                     includes: { '$all': [
+                        // TODO: replace 'weibo.mastersite' with action.data.property
                         'property.weibo.mastersite.loadbalancer',
                         'isp.' + group.isp
                     ]},
