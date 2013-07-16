@@ -166,6 +166,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     }
                     
                     if (log.operator === 'create') { // group creation failed
+                        // In this scenario, the 'group' property of the result
+                        // status object is undefined
                         status = {
                             state: GroupState.FAILED,
                             operator: log.operator,
@@ -195,22 +197,15 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 status.group = group; // current group object, or the snapshot
                                       // one in a 'delete' operation
                 
-                // Now that all operations require the help of orchestration
-                /*
-                // The group is created successfully
-                if (log.operator === 'create') {
-                    status.state = GroupState.DONE;
-                    next(null, status);
-                    return;
-                }
-                */
-
                 if (!jobs) { // orchestration job not created
                              // Since all operations require orchestration's
                              // help, it's supposed to be failed if there is no
                              // job created and the lock is not locked
                     status.state = (!internal && locked) ? GroupState.RUNNING : 
                                                            GroupState.FAILED;
+                    // There is no 'details' property in the result status
+                    // object, which indicates the operation stops when creating
+                    // required orchestration jobs
                     next(null, status);
                     return;
                 }
@@ -294,7 +289,6 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 }
             }
             
-            // logger.done(status);
             action.done(status);
         });
     };
@@ -1158,14 +1152,14 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             logger = C.logging.getStepLogger(this.logger_),
             locks = null,
             group = null,
-            log = null;
+            log = null,
+            tag = null;
 
         C.async.waterfall([
             function (next) { // Lock the operation log 
                 logger.start('Acquiring the operation lock for group ' +
                              params.name);
              
-                // self.lock_(action, 'publishing.group.' + params.name, next);
                 self.lockGroupAndBackends_(action, params.name, false, next);
             },
             function (result, next) { // Query the current status
@@ -1183,7 +1177,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
 
                 logger.done(status);
                 logger.start('Checking if the group ' + params.name + 
-                             ' is available for new publishing');
+                             ' is available for pausing');
                 
                 if (status.state === GroupState.RUNNING) {
                     next(new C.caligula.errors.OperationConflictError(
@@ -1235,13 +1229,26 @@ Condotti.add('caligula.components.publishing.group', function (C) {
 
                 action.acquire('data.publishing.group.update', next);
             },
-            function (result, unused, next) { // Creat orchestration job
+            function (result, unused, next) { // Creat configuration tag
                 logger.done(result);
 
+                tag = 'TAG_GROUP_' + params.name.toUpperCase() + 
+                      '_' + (params.pause ? 'PAUSE' : 'RESUME') + '@' + 
+                      Date.now().toString();
+                
+                logger.start('Tagging the new configuration for group ' +
+                             params.name + ' with tag ' + tag);
+                
+                action.data = { name: tag };
+                action.acquire('configuration.tag.create', next);
+            },
+            function (result, unused, next) { // Creat orchestration job
+                logger.done(result);
+                
                 logger.start('Creating orchestration job for ' +
                              (params.pause ? 'pausing' : 'resuming') +
-                             'backends ' + group.backends.toString() + 
-                             ' of group ' + params.name);
+                             ' group ' + params.name);
+                /*
                 action.data = {
                     nodes: group.backends,
                     command: '/usr/local/sinasrv2/sbin/rome-claudius-pause',
@@ -1254,6 +1261,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     }
                 };
                 action.acquire('orchestration.create', next);
+                */
+                self.updateLoadBalancers_(action, group, log, tag, next);
             }
         ], function (error, result) {
             self.unlockGroupAndBackends_(action, locks, function () {
@@ -1289,7 +1298,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      *                            The signature of the callback function is
      *                            'function (error, backends) {}'
      */
-    GroupHandler.prototype.allocateBackends_ = function (action, isp, scale, callback) {
+    GroupHandler.prototype.allocateBackends_ = function (action, isp, scale, 
+                                                         callback) {
         var self = this,
             logger = C.logging.getStepLogger(this.logger_),
             allocated = null,
@@ -1492,7 +1502,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      *                            The signature of the callback function is
      *                            'function (error, locks) {}'
      */
-    GroupHandler.prototype.lockGroupAndBackends_ = function (action, name, both, callback) {
+    GroupHandler.prototype.lockGroupAndBackends_ = function (action, name, both, 
+                                                             callback) {
         var self = this,
             logger = C.logging.getStepLogger(this.logger_),
             locks = {};
@@ -1538,7 +1549,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      *                            The signature of the callback function is
      *                            'function (error) {}'
      */
-    GroupHandler.prototype.unlockGroupAndBackends_ = function (action, locks, callback) {
+    GroupHandler.prototype.unlockGroupAndBackends_ = function (action, locks, 
+                                                               callback) {
         var self = this,
             logger = C.logging.getStepLogger(this.logger_);
         
