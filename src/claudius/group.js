@@ -21,6 +21,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      * This GroupHandler class is a child class of Handler, and designed to
      * handle the group related actions, such as create, update, and publish
      * etc.
+     *
+     * TODO: add data structure of the group, operation and status objects
      * 
      * @class GroupHandler
      * @constructor
@@ -200,9 +202,13 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     return;
                 }
                 
+
                 if (!jobs) { // orchestration job not created
-                    status.state = locked ? GroupState.RUNNING : 
-                                            GroupState.FAILED;
+                             // Since all operations require orchestration's
+                             // help, it's supposed to be failed if there is no
+                             // job created and the lock is not locked
+                    status.state = (!internal && locked) ? GroupState.RUNNING : 
+                                                           GroupState.FAILED;
                     next(null, status);
                     return;
                 }
@@ -226,16 +232,21 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 status.details = {};
                 jobs.forEach(function (job, index) {
                     var nodes = result[index].nodes;
-                    
                     status.details[job.extras.affected] = nodes;
                     
-                    failed = failed || Object.keys(nodes).some(function (name) {
-                        return nodes[name].error && 
-                               nodes[name].error.code !== 40800;
+                    if ((status.state !== GroupState.DONE) && failed) {
+                        return;
+                    }
+
+                    failed = nodes.some(function (node) {
+                        return node.error && node.error.code !== 40800;
+                               // TODO: replace the constant 40800 with concrete
+                               //       error type
                     });
                 });
-                
-                if ((status.state === GroupState.DONE) && failed) {
+                // Group is supposed to be failed even if a single failure
+                // occurs on a backend/nginx
+                if (failed) {
                     status.state = GroupState.FAILED;
                 }
                 

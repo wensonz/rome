@@ -190,7 +190,9 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                 self.dispatch_(job, message, next);
             },
             function (result, next) {
-                var completed = true;
+                var completed = true,
+                    existing = {},
+                    nodes = [];
                 
                 if (!result) {
                     next(null, null);
@@ -198,23 +200,33 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                 }
                 
                 logger.done(result);
+                job.state.nodes.forEach(function (node) {
+                    existing[node.name] = node;
+                });
                 // merge the node states
-                Object.keys(result).forEach(function (node) {
-                    if ((result[node] !== job.state.nodes[node]) &&
-                        (job.state.nodes[node]) &&
-                        (result[node].error) &&
-                        (result[node].error.code === 40800)) {
-                        result[node] = job.state.nodes[node];
+                Object.keys(result).forEach(function (name) {
+                    var node = null;
+
+                    if ((result[name].error) && 
+                        (result[name].error.code === 40800) &&
+                        existing[name]) {
+                        node = existing[name]; // the last state
+                    } else {
+                        node = result[name];
+                        node.name = name;
                     }
-                    if ((result[node].error && 
-                         result[node].error.code === 40800) ||
-                        (result[node].result && 
-                         result[node].result.state === NodeState.RUNNING)) {
+
+                    nodes.push(node);
+
+                    if ((node.error && node.error.code === 40800) ||
+                        (node.result && node.result.state === NodeState.RUNNING)) {
                         completed = false;
                     }
                 });
                 
-                job.state.nodes = result;
+                // job.state.nodes = result;
+                job.state.nodes = nodes;
+                
                 if (completed) {
                     job.state.job = (job.state.job === JobState.RUNNING ?
                                      JobState.DONE : 
