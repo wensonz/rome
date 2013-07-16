@@ -114,7 +114,8 @@ Condotti.add('caligula.components.orca.app', function (C) {
      * @param {String} data the data received
      */
     OrcaApp.prototype.onKafkaConsumerData_ = function (data) {
-        var message = null;
+        var self = this,
+            message = null;
     
         try {
             message = JSON.parse(data);

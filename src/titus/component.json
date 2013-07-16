@@ -1,6 +1,6 @@
 {
     "router": { "params": { "0": { "value": {
-        "orca": "handlers.orca"
+        "": "handlers.orca"
     }}}},
     "app": {
         "type": "caligula.apps.OrcaApp",

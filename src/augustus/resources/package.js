@@ -12,10 +12,8 @@ Condotti.add('caligula.components.configuration.resources.package', function (C)
      * defined as following:
      * '${resource name}': { // such as "mypkgs"
      *     'type': 'package', // indicate this resource is a package resource
-     *     'packages': {
-     *        '${package name}': '${package version}',
-     *        ...
-     *     }
+     *     'name': '${package name}',
+     *     'version': '${package version}'
      * }
      * 
      * @class PackageResourceProcessor
@@ -47,37 +45,45 @@ Condotti.add('caligula.components.configuration.resources.package', function (C)
                                                            directory, callback) {
         var self = this,
             logger = C.logging.getStepLogger(this.logger_),
-            params = action.data,
-            names = Object.keys(resource.packages);
+            params = action.data;
         
         C.async.waterfall([
-            function (next) { // read package links
-                logger.start('Querying the fetching URLs for packages ' + 
-                             C.lang.reflect.inspect(resource.packages));
+            function (next) { // read package info
+                logger.start('Querying the package info about ' + 
+                             resource.name + '@' + resource.version);
                 
-                C.async.mapSeries(names, function (name, next) {
-                    action.data = {
-                        name: name, 
-                        version: resource.packages[name],
-                        dryrun: true
-                    };
-                    action.acquire('package.fetch', next);
-                }, next);
+                
+                action.data = { criteria: {
+                    name: resource.name,
+                    version: resource.version
+                };
+                action.acquire('package.read', next);
             },
-            function (result, next) { // save the generated content into sls
+            function (result, unused, next) { // save the generated content into sls
                 var path = null,
-                    sources = [],
                     salt = {};
                 
                 logger.done(result);
                 
-                names.forEach(function (name, index) {
-                    var item = {};
-                    item[name] = result[index].url;
-                    sources.push(item);
-                });
-                salt[name] = {'pkg.installed': [{'sources': sources }]};
+                logger.start('Verifying if the package ' + resource.name + '@' +
+                             resource.version + ' exists');
                 
+                if (0 === result.affected) {
+                    next(new C.caligula.errors.PackageNotFoundError(
+                        'Required package ' + resource.name + '@' + 
+                        resource.version + ' does not exist.'
+                    ));
+                    return;
+                }
+
+                logger.done();
+                
+                salt[resource.name] = {
+                    'pkg.installed': [
+                        { 'skip_verify': true },
+                        { 'version': resource.version }
+                    ]
+                };
                 
                 path = C.natives.path.resolve(directory, name + '.sls');
                 

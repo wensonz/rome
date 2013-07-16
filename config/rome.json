@@ -3,7 +3,12 @@
         "condotti.server.logging": { "log4js": {
             "levels": {
                 "Condotti": "INFO",
-                "Kafka - API": "WARN"
+                "Kafka - API": "WARN",
+                "DottiFactory": "INFO",
+                "Router": "INFO",
+                "HttpAction": "INFO",
+                "MongoConnectionFactory": "INFO",
+                "multipart": "INFO"
             },
             "appenders": [{"type": "console", "layout": {"type": "basic"}}]
         }}
@@ -32,13 +37,13 @@
                         { "name": "connect.json" },
                         { 
                             "name": "multipart", 
-                            "config": [ {"directory": "/data1/rome/tmp"} ]
+                            "config": [ {"directory": "/data1/rome/temp"} ]
                         }
                     ]
-                },
+                    }},
                 "1": { "reference": "contextualizer" },
                 "2": { "reference": "router" }
-            }}
+            }
         },
         "contextualizer": {
             "type": "caligula.contextualizers.HttpContextualizer",

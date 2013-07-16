@@ -82,7 +82,7 @@ Condotti.add('caligula.components.orca.action', function (C) {
         logger.start('Dispatching message ' + C.lang.reflect.inspect(message) + 
                      ' to target "' + this.sender + '"');
                        
-        topic = this.app_.getTopic(this.sender);
+        topic = this.app_.getTopic_(this.sender);
         topic.write(content);
         logger.done();
     };

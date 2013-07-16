@@ -51,7 +51,9 @@ Condotti.add('caligula.components.publishing.package', function (C) {
         
         action.acquire('data.publishing.group.read', function (error, result) {
             var resources = null,
-                package = null;
+                package = null,
+                key = null,
+                group = null;
             
             action.data = params;
             
@@ -69,17 +71,31 @@ Condotti.add('caligula.components.publishing.package', function (C) {
                 callback();
                 return;
             }
+
+            group = result.data[0];
+            if (!group.package) {
+                self.logger_.warn('Package info of the publishing group ' +
+                                  group.name + ' can not be found');
+                callback();
+                return;
+            }
             
-            package = result.data[0].package;
+            package = group.package;
             
             configuration.resources = configuration.resources || {};
             resources = configuration.resources;
-            resources['packages'] = resources['packages'] || {
-                type: 'package',
-                packages: {}
+            key = package.name.replace(/\./g, '_'); // replace all comma ','
+                                                    // since it has special
+                                                    // meaning in salt sls file
+            
+            // TODO: check if resources[key].type === 'package'
+            resources[key] = resources[key] || {
+                type: 'package'
             };
             
-            resources['packages'].packages[package.name] = package.version;
+            resources[key].name = package.name;
+            resources[key].version = package.version;
+
             callback();
         });
     };

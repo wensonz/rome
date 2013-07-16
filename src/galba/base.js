@@ -12,11 +12,41 @@ Condotti.add('caligula.components.package.base', function (C) {
      * @class PackageHandler
      * @constructor
      * @extends Handler
+     * @param {Object} config the config object for this package handler
      */
-    function PackageHandler () {
+    function PackageHandler (config) {
         /* inheritance */
         this.super();
         
+        /**
+         * The config object for this handler
+         *
+         * @property config_
+         * @type Object
+         */
+        this.config_ = config; // Can not be empty, null or undefined
+        
+        /**
+         * The directory to keep the uploaded files
+         * 
+         * @property directory_
+         * @type String
+         */
+        this.directory_ = this.config_.directory || '/data1/rome/packages/';
+        
+        /**
+         * The base url to construct the url for downloading files
+         * via HTTP protocol
+         *
+         * @property baseUrl_
+         * @type String
+         */
+        this.baseUrl_ = this.config_.baseUrl;
+        
+        /* initialize */
+        if (this.baseUrl_[this.baseUrl_.length - 1] !== '/') {
+            this.baseUrl_ += '/'; // Add the trailing '/'
+        }
     }
     
     C.lang.inherit(PackageHandler, C.caligula.handlers.Handler);
@@ -50,7 +80,11 @@ Condotti.add('caligula.components.package.base', function (C) {
                 action.acquire('data.package.read', next);
             },
             function (result, unused, next) {
-                var name = null;
+                var name = null,
+                    ws = null,
+                    rs = null,
+                    file = null,
+                    path = null;
                 
                 logger.done(result);
                 
@@ -64,18 +98,70 @@ Condotti.add('caligula.components.package.base', function (C) {
                     return;
                 }
                 logger.done();
+                // Save the package file directly instead of utilizing the
+                // file management API in order to place the package into the
+                // RPM repository directory
+                logger.start('Validate the uploaded package file ' + 
+                             C.lang.reflect.inspect(action.file));
+                             
+                if (!action.file) {
+                    next(new C.caligula.errors.InvalidArgumentError(
+                        'A package file is supposed to be uploaded via this ' +
+                        'API, but it can not be found'
+                    ));
+                    return;
+                }
                 
+                file = action.file;
+                logger.done(file);
+                
+                logger.start('Comparing the md5 of the uploaded package ' + 
+                             file.path);
+                if (params.md5 !== file.hash) {
+                    next(new C.caligula.errors.UploadedFileCorruptedError(
+                        'MD5 of the uploaded package ' + params.name + ' is ' +
+                        file.hash + ' which does not match the one provided ' +
+                        'in the params: ' + params.md5
+                    ));
+                    return;
+                }
+                logger.done();
+                
+                name = params.name + '-' + params.version + '.rpm';
+                path = C.natives.path.resolve(self.directory_, name);
+                logger.start('Copying the temparorily saved package file ' + 
+                             file.path + ' to ' + path);
+                
+                try {
+                    rs = C.natives.fs.createReadStream(file.path);
+                    ws = C.natives.fs.createWriteStream(path);
+                    
+                    rs.on('error', next);
+                    ws.on('error', next);
+                    ws.on('close', next);
+                    
+                    rs.pipe(ws);
+                } catch (e) {
+                    next(new C.caligula.errors.InternalServerError(
+                        e.toString()
+                    ));
+                    return;
+                }
+                /*
                 name = params.name + '-' + params.version + '.rpm';
                 logger.start('Uploading the package file ' + name + 
                              ' with md5: ' + params.md5);
                              
                 action.data = { name: name, md5: params.md5 };
                 action.acquire('file.upload', next);
+                */
             },
-            function (result, unused, next) {
+            function (next) {
                 logger.done();
                 
                 action.data = params;
+                action.data.locations = [self.baseUrl_];
+
                 logger.start('Creating package object with params: ' +
                              C.lang.reflect.inspect(action.data));
                 action.acquire('data.package.create', next);
@@ -147,7 +233,8 @@ Condotti.add('caligula.components.package.base', function (C) {
                 action.acquire('data.package.read', next);
             },
             function (result, unused, next) {
-                var name = null;
+                var package = null,
+                    url = null;
                 
                 logger.done(result);
                 
@@ -160,13 +247,16 @@ Condotti.add('caligula.components.package.base', function (C) {
                     ));
                     return;
                 }
+                package = result.data[0];
+                logger.done(package);
                 
-                logger.done();
+                logger.start('Generating the download url for package ' + 
+                             params.name + '@' + params.version);
                 
-                name = params.name + '-' + params.version + '.rpm';
-                logger.start('Downloading package file ' + name);
-                action.data = { name: name, dryrun: true };
-                action.acquire('file.download', next);
+                url = package.locations[0] + params.name + '-' + 
+                      params.version + '.rpm';
+
+                next(null, url);
             }
         ], function (error, result) {
             if (error) {
