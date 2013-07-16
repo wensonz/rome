@@ -16,6 +16,13 @@ Condotti.add('caligula.components.publishing.group', function (C) {
     
     var JobState = C.namespace('caligula.orchestration').JobState;
     var NodeState = C.namespace('caligula.orchestration').NodeState;
+    /**
+     * The default timeout settings for lock lease, or orchestration timeout
+     *
+     * @property DEFAULT_TIMEOUTS
+     * @type Object
+     */
+    var DEFAULT_TIMEOUTS = ;
     
     /**
      * This GroupHandler class is a child class of Handler, and designed to
@@ -27,10 +34,49 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      * @class GroupHandler
      * @constructor
      * @extends Handler
+     * @param {Object} config the config object for this handler
      */
-    function GroupHandler () {
+    function GroupHandler (config) {
         /* inheritance */
         this.super();
+
+        /**
+         * The config object for this handler
+         * 
+         * @property config_
+         * @type Object
+         */
+        this.config_ = config || {};
+
+        /**
+         * The timeout settings
+         *
+         * @property timeouts_
+         * @type Object
+         */
+        this.timeouts_ = {
+            lease: 10 * 1000, // 10 sec for a lock to be released automatically
+            timer: 5 * 1000, // 5 sec for a timer to be triggered to check 
+                             // the status
+            orchestration: {
+                backends: 10 * 60 * 1000, // 10 min for package installation
+                loadbalancers: 5 * 60 * 1000 // 5 min for load balancer to reload
+            }
+        };
+
+        /**
+         * The command to be executed on backends/loadbalancers to update their
+         * configuration
+         *
+         * @property command_
+         * @type String
+         * @default '/usr/local/sinasrv2/sbin/rome-config-sync'
+         */
+        this.command_ = this.config_.command || 
+                        '/usr/local/sinasrv2/sbin/rome-config-sync';
+
+        /* initialize */
+        C.lang.merge(this.timeouts_, this.config_.timeouts);
     }
     
     C.lang.inherit(GroupHandler, C.caligula.handlers.Handler);
@@ -223,6 +269,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     next(new C.caligula.errors.GroupNotFoundError(
                         'Required group ' + params.name + ' does not exist'
                     ));
+                    return;
                 }
                 
                 //
@@ -317,7 +364,6 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         //  6. create orchestration job
         //  7. return
         
-        action.lease = 15 * 60 * 1000;
         C.async.waterfall([
             function (next) { // Lock the operation log 
                 logger.start('Acquiring the operation lock for group ' +
@@ -364,7 +410,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
 
                 logger.done();
                 group = status.group;
-                
+
                 logger.start('Creating publishing operation log for group ' + 
                              params.name);
                 log = { 
@@ -374,20 +420,20 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     params: params,
                     timestamp: Date.now()
                 };
-                
+
                 action.data = log;
                 action.acquire('data.publishing.group.operation.create', next);
             },
             function (result, unused, next) { // Update the group data
                 var package = null;
-                
+
                 logger.done(result);
-                
+
                 if (!params.package) {
                     package = group.package || { 
                         name: 'trunk', version: 'latest'
                     };
-                    
+
                     self.logger_.warn('No package is specified in params, ' +
                                       'current configured package ' +
                                       package.name + '@' + package.version +
@@ -395,7 +441,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     next(null, null, null);
                     return;
                 }
-                
+
                 action.data = {
                     criteria: { name: params.name },
                     update: { '$set': {
@@ -405,7 +451,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.start('Updating the package for group ' + params.name +
                              ' to ' + params.package.name + '@' + 
                              params.package.version);
-                
+
                 action.acquire('data.publishing.group.update', next);
             },
             function (result, unused, next) { // Create configuration TAG
@@ -415,13 +461,13 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 
                 // Update the package field for calling updateBackends_
                 group.package = params.package;
-                
+
                 tag = 'TAG_GROUP_' + params.name.toUpperCase() + 
                       '_PUBLISH@' + Date.now().toString();
-                      
+
                 logger.start('Tagging the new configuration for group ' +
                              params.name + ' with tag ' + tag);
-                
+
                 action.data = { name: tag };
                 action.acquire('configuration.tag.create', next);
             },
@@ -447,8 +493,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             });
         });
     };
-    
-    
+
+
     /**
      * Create a new group with the specified params.
      *
@@ -615,8 +661,6 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             tag = null,
             difference = null,
             logger = C.logging.getStepLogger(this.logger_);
-        
-        action.lease = 15 * 60 * 1000;
         
         C.async.waterfall([
             function (next) { // Lock the group and backends
@@ -1111,7 +1155,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             }
         };
         
-        action.acquire('data.publish.group.operation.read', function (error, result) {
+        action.acquire('data.publish.group.operation.read', function (error, 
+                                                                      result) {
             if (error) {
                 logger.error(error);
                 action.error(error);
@@ -1245,20 +1290,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.start('Creating orchestration job for ' +
                              (params.pause ? 'pausing' : 'resuming') +
                              ' group ' + params.name);
-                /*
-                action.data = {
-                    nodes: group.backends,
-                    command: '/usr/local/sinasrv2/sbin/rome-claudius-pause',
-                    arguments: [params.pause],
-                    timeout: 120 * 1000, // 2 min
-                    extras: { 
-                        group: group.name, 
-                        operation: log.id, 
-                        affected: 'backends'
-                    }
-                };
-                action.acquire('orchestration.create', next);
-                */
+                
                 self.updateLoadBalancers_(action, group, log, tag, next);
             }
         ], function (error, result) {
@@ -1345,6 +1377,9 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 //       so the scale are divided by 5, which means all
                 //       resources of one ISP are to be allocated if user
                 //       specifies the scale to be 5
+                // TODO: convert constant "5" into a calculation of the ratio of
+                //       the number of the testing servers over the one of the
+                //       production servers
                 needed = Math.ceil(overall.length * scale / 5);
                 
                 logger.start('Reading all groups belong to ISP ' + isp);
@@ -1376,15 +1411,6 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 }
                 
                 logger.done();
-                
-                /*
-                count = result.data.length;
-                result.data.forEach(function (item) {
-                    item.backends.forEach(function (backend) {
-                        allocated[backend] = true;
-                    });
-                });
-                */
                 
                 logger.start('Reading deleting operations currently on going');
                 action.data = {
@@ -1615,10 +1641,9 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         action.data = {
             nodes: backends,
             // TODO: make this command configurable
-            command: '/usr/local/sinasrv2/sbin/rome-config-sync',
+            command: self.command_,
             arguments: [tag],
-            timeout: 15 * 60 * 1000, // 15 min
-                                     // TODO: make timeout configurable
+            timeout: self.timeouts_.orchestration.backends,
             extras: {
                 group: group.name, 
                 operation: log.id, 
@@ -1655,8 +1680,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                     clearInterval(timer);
                     done(state);
                 });
-            }, 5000); // every 5 sec
-            // TODO: make the '5000' interval configurable
+            }, self.timeouts_.timer); // every 5 sec
         });
     };
     
@@ -1725,9 +1749,9 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 
                 action.data = {
                     nodes: loadbalancers,
-                    command: '/usr/local/sinasrv2/sbin/rome-config-sync',
+                    command: self.command_,
                     arguments: [tag],
-                    timeout: 10 * 60 * 1000, // 10 min
+                    timeout: self.timeouts_.orchestration.loadbalancers,
                     extras: {
                         group: group.name, 
                         operation: log.id, 
@@ -1766,10 +1790,10 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         
         logger.start('Calling lock.acquire on "' + name + '"');
         
-        action.data = { 
+        action.data = {
             name: name,
-            lease: action.lease || 10 * 1000 // 10 sec, max lifespan for a lock
-        }; 
+            lease: this.timeouts_.lease
+        };
         
         action.acquire('lock.acquire', function (error, result) {
             action.data = params;
