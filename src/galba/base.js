@@ -158,10 +158,20 @@ Condotti.add('caligula.components.package.base', function (C) {
             },
             function (next) {
                 logger.done();
+
+                logger.start('Running createrepo in ' + self.directory_ + 
+                             ' to update the YUM repository');
+                C.natives.child_process.exec(
+                    'createrepo', ['--update', '"' + self.directory_ + '"'], 
+                    next
+                );
+            },
+            function (stdout, stderr, next) {
+                logger.done(stdout.toString() + '\n' + stderr.toString());
                 
                 action.data = params;
                 action.data.locations = [self.baseUrl_];
-
+                
                 logger.start('Creating package object with params: ' +
                              C.lang.reflect.inspect(action.data));
                 action.acquire('data.package.create', next);
