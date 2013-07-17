@@ -1549,7 +1549,10 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             function (result, next) { // Lock the backend
                 logger.done(result);
                 locks['publishing.group.' + name] = result;
-                // locks.group = result;
+                if (!both) {
+                    next();
+                    return;
+                }
 
                 logger.start('Acquiring the lock on the backend servers');
                 self.lock_(action, 'publishing.backend', next);
@@ -1563,8 +1566,11 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 return;
             }
             
-            logger.done(result);
-            locks['publishing.backend'] = result;
+            if (both) {
+                logger.done(result);
+                locks['publishing.backend'] = result;
+            }
+            
             callback(null, locks);
         });
     };

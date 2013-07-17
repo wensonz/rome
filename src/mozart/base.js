@@ -436,7 +436,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
         job.id = C.uuid.v4();
         job.state = {
             job: JobState.RUNNING,
-            nodes: {}
+            nodes: []
         };
         
         C.async.waterfall([
