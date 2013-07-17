@@ -81,6 +81,7 @@ Condotti.add('caligula.components.configuration.resources.package', function (C)
                 salt[resource.name] = {
                     'pkg.installed': [
                         { 'skip_verify': true },
+                        { 'refresh': true },
                         { 'version': resource.version }
                     ]
                 };
