@@ -5,12 +5,12 @@
             "0": { "value": {
                 "kafka": {
                     "brokers": [{
-                        "id": 0, "host": "10.75.15.238", "port": 9092
+                        "id": 0, "host": "#KAFKA-SERVER#", "port": #KAFKA-PORT#
                     }],
                     "compression": "gzip",
                     "queueTime": 200,
                     "batchSize": 1,
-                    "maxFetchDelay": 1000
+                    "maxFetchDelay": 100
                 },
                 "producer": {
                     "partitions": { "consume": ["0-0"], "produce": ["0:1"] }
@@ -18,7 +18,7 @@
                 "consumer": {
                     "partitions": { "consume": ["0-0"], "produce": ["0:1"] }
                 },
-                "id": "10.210.215.50",
+                "id": "#SELF-ID#",
                 "timeout": 60000
             }}
         }

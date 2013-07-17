@@ -32,7 +32,7 @@
                     "middlewares": [
                         { 
                             "name": "connect.static", 
-                            "config": ["/data1/rome/files"] 
+                            "config": ["/data1/rome"] 
                         },
                         { "name": "connect.json" },
                         { 

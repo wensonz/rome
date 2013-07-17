@@ -1,6 +1,6 @@
-host = '10.210.215.50'
-port = 8080
-id = '10.210.213.51'
+host = '#API-SERVER-HOST#'
+port = #API-SERVER-PORT#
+id = '#SELF-ID#'
 tarballs = {
     'remote': 'configuration',
     'local': '/data1/rome/configuration'

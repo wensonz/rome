@@ -21,7 +21,7 @@
                 "consumer": {
                     "partitions": { "consume": ["0-0"], "produce": ["0:1"] }
                 },
-                "id": "10.210.213.51"
+                "id": "#SELF-ID#"
             }},
             "1": { "reference": "contextualizer" },
             "2": { "reference": "router" }

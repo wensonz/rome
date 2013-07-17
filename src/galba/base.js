@@ -24,7 +24,7 @@ Condotti.add('caligula.components.package.base', function (C) {
          * @property config_
          * @type Object
          */
-        this.config_ = config; // Can not be empty, null or undefined
+        this.config_ = config || {}; // Can not be empty, null or undefined
         
         /**
          * The directory to keep the uploaded files

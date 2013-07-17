@@ -4,6 +4,11 @@
     }}}},
     "handlers.package": {
         "type": "caligula.handlers.PackageHandler",
-        "params": {}
+        "params": {
+            "0": { "value": { 
+                "directory": "/data1/rome/packages",
+                "baseUrl": "http://#API-SERVER#/packages"
+            }}
+        }
     }
 }

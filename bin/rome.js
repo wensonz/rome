@@ -31,10 +31,10 @@ function main() {
     }
     
     config.daemon = config.daemon || {
-        outFile: '/data1/rome/server/logs/out.log',
-        errFile: '/data1/rome/server/logs/err.log',
+        outFile: '/data1/rome/logs/out.log',
+        errFile: '/data1/rome/logs/err.log',
         max: '10',
-        pidFile: '/data1/rome/server/rome.pid'
+        pidFile: '/data1/rome/rome.pid'
     };
     
     startStopDaemon(config.daemon, run.bind(null, config))
