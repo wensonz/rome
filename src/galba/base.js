@@ -162,7 +162,7 @@ Condotti.add('caligula.components.package.base', function (C) {
                 logger.start('Running createrepo in ' + self.directory_ + 
                              ' to update the YUM repository');
                 C.natives.child_process.exec(
-                    'createrepo', ['--update', '"' + self.directory_ + '"'], 
+                    'createrepo --update "' + self.directory_ + '"', 
                     next
                 );
             },
@@ -189,6 +189,7 @@ Condotti.add('caligula.components.package.base', function (C) {
             };
             
             if (owner) {
+                action.data = params;
                 self.logger_.debug('Release the pre-acquired lock ' +
                                    'for package ' + params.name + '@' + 
                                    params.version + ' ...');
