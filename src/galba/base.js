@@ -127,7 +127,7 @@ Condotti.add('caligula.components.package.base', function (C) {
                 }
                 logger.done();
                 
-                name = params.name + '-' + params.version + '.rpm';
+                name = params.name + '-' + params.version + '.x86_64.rpm';
                 path = C.natives.path.resolve(self.directory_, name);
                 logger.start('Copying the temparorily saved package file ' + 
                              file.path + ' to ' + path);
@@ -265,7 +265,7 @@ Condotti.add('caligula.components.package.base', function (C) {
                              params.name + '@' + params.version);
                 
                 url = package.locations[0] + params.name + '-' + 
-                      params.version + '.rpm';
+                      params.version + '.x86_64.rpm';
 
                 next(null, url);
             }
