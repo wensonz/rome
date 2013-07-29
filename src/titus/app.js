@@ -43,6 +43,15 @@ Condotti.add('caligula.components.orca.app', function (C) {
          * @deafult null
          */
         this.kafka_ = null;
+
+        /**
+         * The offset of the topic this Kafka client to consume from
+         *
+         * @property offset_
+         * @type Number
+         * @default 0
+         */
+        this.offset_ = 0;
     
         /**
          * The uptime of this client in order to filter out the expired message 
@@ -67,11 +76,24 @@ Condotti.add('caligula.components.orca.app', function (C) {
      * @return {} 
      */
     OrcaApp.prototype.initialize_ = function () {
-        var Kafka = C.require('franz-kafka');
+        var Kafka = C.require('franz-kafka'),
+            offset = null;
         
         this.logger_.info('Initializing Orca client "' + this.id +
                           '" with config ' + 
                           C.lang.reflect.inspect(this.config_));
+        
+        try {
+            this.offset_ = parseInt(
+                C.natives.fs.readFileSync(this.config_.offset)
+            );
+            this.logger_.debug('Offset for topic ' + this.config_.id + ': ' +
+                               this.offset_);
+        } catch {
+            this.logger_.error('Can not read offset from file ' + 
+                               this.config_.offset + '. Use 0 as default.');
+            this.offset_ = 0;
+        }
         
         this.config_.kafka.logger = C.logging.getLogger('Kafka - ORCA');
         this.kafka_ = Kafka(this.config_.kafka);
@@ -87,7 +109,8 @@ Condotti.add('caligula.components.orca.app', function (C) {
      * @method onKafkaConnect_
      */
     OrcaApp.prototype.onKafkaConnect_ = function () {
-        var topic = null;
+        var topic = null,
+            self = this;
     
         this.logger_.debug('Kafka client becomes connected to the servers');
         topic = this.kafka_.topics[this.id];
@@ -95,9 +118,21 @@ Condotti.add('caligula.components.orca.app', function (C) {
             this.logger_.debug('Kafka client connects to the servers first ' +
                                'time');
             
+            if (this.config_.consumer && this.config_.consumer.partitions &&
+                this.config_.consumer.partitions.consume) {
+                this.config_.consumer.partitions.consume = [
+                    '0-0:' + this.offset_
+                ];
+            }
+
             topic = this.kafka_.topic(this.id, this.config_.consumer);
             topic.on('data', this.onKafkaConsumerData_.bind(this));
-            
+            topic.on('offset', this.onKafkaConsumerOffset_.bind(this));
+            setInterval(function () {
+                C.natives.fs.writeFileSync(self.config_.offset, 
+                                           self.offset_.toString());
+            }, 2000); // flush the offset every 2 sec
+
             // consumer won't emit error
             // topic.on('error', self.onKafkaConsumerError_.bind(self));
             this.logger_.info('Orca is now running.');
@@ -105,6 +140,18 @@ Condotti.add('caligula.components.orca.app', function (C) {
         
         // try to call resume again to continue receiving data
         topic.resume();
+    };
+
+    /**
+     * The 'offset' event handler for the Kafka topic
+     *
+     * @method onKafkaConsumerOffset_
+     * @param {String} partition the partition emits this event
+     * @param {Number} offset the new offset for this consumption
+     */
+    OrcaApp.prototype.onKafkaConsumerOffset_ = function (partition, offset) {
+        this.logger_.debug('New offset arrived: ' + offset);
+        this.offset_ = offset;
     };
     
     /**
@@ -155,26 +202,6 @@ Condotti.add('caligula.components.orca.app', function (C) {
                                action.name + ' ...');
             self.router_.route(action);
         });
-        
-        /*
-        switch (message.command) {
-        case 'EXEC':
-            this.handleExecCommand_(message);
-            break;
-        case 'STAT':
-            this.handleStatCommand_(message);
-            break;
-        case 'TEE':
-            this.handleTeeCommand_(message);
-            break;
-        case 'CANCEL':
-            this.handleCancelCommand_(message);
-            break;
-        default:
-            this.handleUnsupportedCommand_(message);
-            break;
-        }
-        */
     };
     
     /**

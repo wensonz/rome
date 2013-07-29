@@ -66,6 +66,15 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
          * @deafult null
          */
         this.kafka_ = null;
+
+        /**
+         * The offset of the topic this Kafka client to consume from
+         *
+         * @property offset_
+         * @type Number
+         * @default 0
+         */
+        this.offset_ = 0;
         
         /**
          * Whether the kafka client has been successfully setup
@@ -108,7 +117,20 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
     OrchestrationHandler.prototype.initialize_ = function () {
         var Kafka = C.require('franz-kafka'),
             config = null,
-            self = this;
+            self = this,
+            offset = null;
+
+        try {
+            this.offset_ = parseInt(
+                C.natives.fs.readFileSync(this.config_.offset)
+            );
+            this.logger_.debug('Offset for topic ' + this.config_.id + ': ' +
+                               this.offset_);
+        } catch {
+            this.logger_.error('Can not read offset from file ' + 
+                               this.config_.offset + '. Use 0 as default.');
+            this.offset_ = 0;
+        }
         
         config = this.config_.kafka;
         config.logger = C.logging.getLogger('Kafka - API');
@@ -118,10 +140,23 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
             var topic = self.kafka_.topics[self.config_.id];
             
             if (!topic) {
+                if (self.config_.consumer && self.config_.consumer.partitions &&
+                    self.config_.consumer.partitions.consume) {
+                    self.config_.consumer.partitions.consume = [
+                        '0-0:' + self.offset_
+                    ];
+                }
+
                 topic = self.kafka_.topic(self.config_.id, 
                                           self.config_.consumer);
                                           
                 topic.on('data', self.onKafkaConsumerData_.bind(self));
+                topic.on('offset', self.onKafkaConsumerOffset_.bind(self));
+                setInterval(function () {
+                    C.natives.fs.writeFileSync(self.config_.offset, 
+                                               self.offset_.toString());
+                }, 2000); // flush the offset every 2 sec
+
                 // consumer won't emit error
                 // topic.on('error', self.onKafkaConsumerError_.bind(self));
             }
@@ -491,6 +526,19 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
             logger.done();
             action.done({ id: job.id });
         });
+    };
+
+    /**
+     * The 'offset' event handler for the Kafka topic
+     *
+     * @method onKafkaConsumerOffset_
+     * @param {String} partition the partition emits this event
+     * @param {Number} offset the new offset for this consumption
+     */
+    OrchestrationHandler.prototype.onKafkaConsumerOffset_ = function (partition,
+                                                                      offset) {
+        this.logger_.debug('New offset arrived: ' + offset);
+        this.offset_ = offset;
     };
     
     /**
