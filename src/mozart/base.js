@@ -126,7 +126,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
             );
             this.logger_.debug('Offset for topic ' + this.config_.id + ': ' +
                                this.offset_);
-        } catch {
+        } catch (e) {
             this.logger_.error('Can not read offset from file ' + 
                                this.config_.offset + '. Use 0 as default.');
             this.offset_ = 0;
