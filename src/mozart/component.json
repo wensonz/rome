@@ -19,7 +19,8 @@
                     "partitions": { "consume": ["0-0"], "produce": ["0:1"] }
                 },
                 "id": "#SELF-ID#",
-                "timeout": 60000
+                "timeout": 60000,
+                "offset": "#KAFKA-OFFSET-FILE#"
             }}
         }
     }

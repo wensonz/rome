@@ -21,7 +21,8 @@
                 "consumer": {
                     "partitions": { "consume": ["0-0"], "produce": ["0:1"] }
                 },
-                "id": "#SELF-ID#"
+                "id": "#SELF-ID#",
+                "offset": "#KAFKA-OFFSET-FILE#"
             }},
             "1": { "reference": "contextualizer" },
             "2": { "reference": "router" }
