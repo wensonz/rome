@@ -151,7 +151,7 @@ Condotti.add('caligula.components.orca.app', function (C) {
      */
     OrcaApp.prototype.onKafkaConsumerOffset_ = function (partition, offset) {
         this.logger_.debug('New offset arrived: ' + offset);
-        this.offset_ = offset;
+        this.offset_ = offset || 0;
     };
     
     /**
