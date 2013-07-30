@@ -50,7 +50,9 @@ Condotti.add('caligula.components.orca.handler', function (C) {
         var self = this,
             path = null,
             fd = null,
-            logger = C.logging.getStepLogger(this.logger_);
+            stats = null,
+            logger = C.logging.getStepLogger(this.logger_),
+            MAX_TEE_SIZE = 10 * 1024; // 10K
         
         path = C.natives.path.resolve(this.config_.root, action.job);
         
@@ -89,18 +91,30 @@ Condotti.add('caligula.components.orca.handler', function (C) {
                     next(error);
                     return;
                 }
-            
+                logger.start('Checking the length of the OUTPUT file ' + path);
+                C.natives.fs.stat(path, next);
+            },
+            function (result, next) {
+                logger.done(result);
+                stats = result;
+
                 logger.start('Reading the OUTPUT from file ' + path);
                 C.natives.fs.open(path, 'r', next);
             },
             function (result, next) {
-                var buffer = null;
+                var buffer = null,
+                    size = null;
+
                 logger.done(result);
                 fd = result;
                 
-                logger.start('Reading the begining 10K bytes from the output');
-                buffer = new Buffer(10 * 1024); // 10K
-                C.natives.fs.read(fd, buffer, 0, 10 * 1024, 0, next);
+                size = Math.min(stats.size, MAX_TEE_SIZE);
+                
+                logger.start('Reading the ending ' + size + 
+                             ' bytes from the output');
+                buffer = new Buffer(size);
+                C.natives.fs.read(fd, buffer, 0, size, 
+                                  Math.max(0, stats.size - MAX_TEE_SIZE), next);
             }
         ], function (error, read, buffer) {
             var content = null;
