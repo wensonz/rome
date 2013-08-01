@@ -248,6 +248,10 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
                         node = existing[name]; // the last state
                     } else {
                         node = result[name];
+                        delete node.id;
+                        delete node.job;
+                        delete node.sender;
+                        delete node.timestamp;
                         node.name = name;
                     }
 

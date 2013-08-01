@@ -267,7 +267,10 @@ Condotti.add('caligula.components.orca.handler', function (C) {
             logger.done(stat);
             
             result = {};
-            if (stat.timeout) {
+            if (stat.failed) {
+                result.state = NodeState.FAILED;
+                result.reason = stat.reason;
+            } else if (stat.timeout) {
                 result.state = NodeState.TIMEOUT;
             } else if (stat.cancelled) {
                 result.state = NodeState.CANCELLED;
@@ -280,7 +283,6 @@ Condotti.add('caligula.components.orca.handler', function (C) {
             }
             action.done(result);
         });
-    
     };
 
 
@@ -427,7 +429,41 @@ Condotti.add('caligula.components.orca.handler', function (C) {
                         action.data.command,
                         action.data.arguments,
                         { detached: true } // TODO: add uid and gid support
-                    );
+                    ).on('error', function (e) {
+
+                        if (child.timer) {
+                            clearTimeout(child.timer);
+                            child.timer = null;
+                        }
+                        
+                        C.natives.fs.writeFile(
+                            C.natives.path.resolve(path, 'stat'),
+                            JSON.stringify({ 
+                                failed: true,
+                                reason: e.toString()
+                            }, null, 4)
+                        );
+                        delete action.running[action.job];
+
+                    }).on('exit', function (code, signal) {
+                        if (child.timer) {
+                            clearTimeout(child.timer);
+                            child.timer = null;
+                        }
+                        
+                        C.natives.fs.writeFile(
+                            C.natives.path.resolve(path, 'stat'),
+                            JSON.stringify({ 
+                                code: code, 
+                                signal: signal,
+                                cancelled: child.cancelled,
+                                timeout: child.timeout
+                            }, null, 4)
+                        );
+                    
+                        delete action.running[action.job];
+                    });
+
                 } catch (e) {
                     logger.error(e);
                     next(new C.caligula.errors.InvalidArgumentError(
@@ -435,33 +471,10 @@ Condotti.add('caligula.components.orca.handler', function (C) {
                     ));
                     return;
                 }
-            
+                
                 child.stdout.pipe(output);
                 child.stderr.pipe(output);
-            
-                // bind the "exit" event to remove from running table and
-                // create the "stat" file
-                child.on('exit', function (code, signal) {
-                    
-                    if (child.timer) {
-                        clearTimeout(child.timer);
-                        child.timer = null;
-                    }
                 
-                    C.natives.fs.writeFile(
-                        C.natives.path.resolve(path, 'stat'),
-                        JSON.stringify({ 
-                            code: code, 
-                            signal: signal,
-                            cancelled: child.cancelled,
-                            timeout: child.timeout
-                        }, null, 4)
-                    );
-                
-                    delete action.running[action.job];
-                    // send "NOTIFY" to the API server?
-                });
-            
                 // setup the timeout watcher
                 child.timer = setTimeout(function () {
                     self.logger_.warn('Child process ' + child.pid + ' for job ' +
@@ -471,13 +484,13 @@ Condotti.add('caligula.components.orca.handler', function (C) {
                     delete action.running[action.job];
                     child.kill();
                 }, action.data.timeout);
-            
+                
                 // create pid file
                 C.natives.fs.writeFile(
                     C.natives.path.resolve(path, 'pid'),
                     child.pid.toString()
                 );
-            
+                
                 child.unref();
                 action.running[action.job] = child;
                 next();
