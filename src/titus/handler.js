@@ -98,6 +98,12 @@ Condotti.add('caligula.components.orca.handler', function (C) {
                 logger.done(result);
                 stats = result;
 
+                if (stats.size === 0) {
+                    self.logger_.warn('OUTPUT file ' + path + ' is empty.');
+                    next(null, null);
+                    return;
+                }
+
                 logger.start('Reading the OUTPUT from file ' + path);
                 C.natives.fs.open(path, 'r', next);
             },
@@ -105,9 +111,13 @@ Condotti.add('caligula.components.orca.handler', function (C) {
                 var buffer = null,
                     size = null;
 
+                if (!result) {
+                    next(null, null, null);
+                    return;
+                }
+                
                 logger.done(result);
                 fd = result;
-                
                 size = Math.min(stats.size, MAX_TEE_SIZE);
                 
                 logger.start('Reading the ending ' + size + 
@@ -131,8 +141,13 @@ Condotti.add('caligula.components.orca.handler', function (C) {
                 return;
             }
             
-            content = buffer.toString();
-            logger.done(content);
+            if (buffer) {
+                content = buffer.toString();
+                logger.done(content);
+            } else {
+                content = '';
+            }
+            
             action.done(content);
         });
     };
