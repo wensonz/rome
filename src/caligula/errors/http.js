@@ -26,6 +26,7 @@ Condotti.add('caligula.errors.http', function (C) {
      *   - JobNotFoundError = 40406
      *   - JobDataNotFoundError = 40407
      *   - LoadBalancerIspNotFoundError = 40408
+     *   - LoadBalancerPropertyNotFoundError = 40409
      *
      * - CONFLICT = 409
      *   - ConflictError = 40900

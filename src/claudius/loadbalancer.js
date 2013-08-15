@@ -54,6 +54,7 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
             self = this,
             logger = C.logging.getStepLogger(this.logger_),
             isp = null,
+            property = null,
             node = null,
             error = null;
             
@@ -61,17 +62,27 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
         logger.start('Searching for the ISP this load balancer belongs to');
         node = configurations[params.node];
         // node MUST exist
-        node.includes.some(function (include) {
+        node.includes.forEach(function (include) {
             if (include.search(/isp\./) === 0) {
                 isp = include.substring(4);
-                return true;
+            } else if (include.search(/property\./) === 0) {
+                property = include.split('.')[1];
             }
-            return false;
         });
         
         if (!isp) {
             error = C.caligula.errors.LoadBalancerIspNotFoundError(
                 'Can not find the ISP name for the load balancer ' + params.node
+            );
+            logger.error(error);
+            callback(error);
+            return;
+        }
+
+        if (!property) {
+            error = C.caligula.errors.LoadBalancerPropertyNotFoundError(
+                'Can not find the name of the property which this load ' +
+                'balancer ' + params.node + ' belongs to'
             );
             logger.error(error);
             callback(error);
@@ -127,7 +138,8 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
             strategies = context.strategies;
             
             upstreams.some(function (upstream) {
-                if (upstream.name === 'default.weibo.com') {
+                // if (upstream.name === 'default.weibo.com') {
+                if (upstream.name === context['default-upstream']) {
                     defaults = upstream;
                     return true;
                 }
@@ -135,7 +147,8 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
             });
             
             if (!defaults) {
-                defaults = { name: 'default.weibo.com', members: [] };
+                // defaults = { name: 'default.weibo.com', members: [] };
+                defaults = { name: context['default-upstream'], members: [] };
                 upstreams.push(defaults);
             }
             
@@ -268,7 +281,25 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
     C.lang.inherit(LoadBalancerIspNotFoundError, C.caligula.errors.NotFoundError);
     
     C.namespace('caligula.errors').LoadBalancerIspNotFoundError = LoadBalancerIspNotFoundError;
-        
+    
+    /**
+     * This type of error is thrown when the name of the property which the load
+     * balancer belongs to can not be found from its inclusions.
+     *
+     * @class LoadBalancerPropertyNotFoundError
+     * @constructor
+     * @extends NotFoundError
+     * @param {String} message the message describes this error
+     */
+    function LoadBalancerPropertyNotFoundError (message) {
+        /* inheritance */
+        this.super(9, message);
+    }
+    
+    C.lang.inherit(LoadBalancerPropertyNotFoundError, C.caligula.errors.NotFoundError);
+    
+    C.namespace('caligula.errors').LoadBalancerPropertyNotFoundError = LoadBalancerPropertyNotFoundError;
+
         
     /**
      * This type of error is thrown when the strategy type that user specified

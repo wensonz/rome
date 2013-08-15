@@ -370,7 +370,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                              params.name);
                              
                 // self.lock_(action, 'publishing.group.' + params.name, next);
-                self.lockGroupAndBackends_(action, params.name, false, next);
+                self.lockGroupAndBackends_(action, params.property, params.name, 
+                                           false, next);
             },
             function (result, next) { // Query the current status
                 logger.done(result);
@@ -516,7 +517,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.start('Acquiring the lock on on group ' + params.name +
                              ' and backends for resource allocation');
 
-                self.lockGroupAndBackends_(action, params.name, true, next);
+                self.lockGroupAndBackends_(action, params.property, params.name, 
+                                           true, next);
             },
             function (result, next) { // Read current status of the group
                 var name = null;
@@ -580,7 +582,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.start('Trying to allocate backend servers of ISP ' +
                              params.isp + ' at scale ' + params.scale);
                 
-                self.allocateBackends_(action, params.isp, params.scale, next);
+                self.allocateBackends_(action, params.property, params.isp, 
+                                       params.scale, next);
             },
             function (result, next) { // create operation log
                 
@@ -671,7 +674,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             function (next) { // Lock the group and backends
                 logger.start('Acquiring the lock on on group ' + params.name +
                              ' and backends for resource allocation');
-                self.lockGroupAndBackends_(action, params.name, true, next);
+                self.lockGroupAndBackends_(action, params.property, params.name, 
+                                           true, next);
             },
             function (result, next) { // Read current status of the group
                 logger.done(result);
@@ -730,7 +734,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.start('Trying to allocate backend servers of ISP ' +
                              group.isp + ' by scale ' + difference);
                 
-                self.allocateBackends_(action, group.isp, difference, next);
+                self.allocateBackends_(action, params.property, group.isp, 
+                                       difference, next);
             },
             function (result, next) { // create operation log
                 var count = 0;
@@ -836,7 +841,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                                      'loadbalancers affected by group ' +
                                      params.name + ' of ISP ' + group.isp);
                          
-                        self.updateLoadBalancers_(action, group, log, tag);
+                        self.updateLoadBalancers_(action, params.property, 
+                                                  group, log, tag);
                     }
                 );
             },
@@ -851,7 +857,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                              'loadbalancers affected by group ' +
                              params.name + ' of ISP ' + group.isp);
                          
-                self.updateLoadBalancers_(action, group, log, tag, next);
+                self.updateLoadBalancers_(action, params.property, group, log, 
+                                          tag, next);
             }
         ], function (error, result) {
             self.unlockGroupAndBackends_(action, locks, function () {
@@ -894,7 +901,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         C.async.waterfall([
             function (next) { // Lock the group and backends
                 logger.start('Acquiring the lock on on group ' + params.name);
-                self.lockGroupAndBackends_(action, params.name, false, next);
+                self.lockGroupAndBackends_(action, params.property, params.name, 
+                                           false, next);
             },
             function (result, next) { // Read current status of the group
                 logger.done(result);
@@ -1004,7 +1012,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                              C.lang.reflect.inspect(params.strategy) + 
                              ' on group ' + params.name);
                 
-                self.updateLoadBalancers_(action, group, log, tag, next);
+                self.updateLoadBalancers_(action, params.property, group, log, 
+                                          tag, next);
             }
         ], function (error, result) {
             self.unlockGroupAndBackends_(action, locks, function () {
@@ -1038,7 +1047,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
         C.async.waterfall([
             function (next) { // Lock the group and backends
                 logger.start('Acquiring the lock on on group ' + params.name);
-                self.lockGroupAndBackends_(action, params.name, false, next);
+                self.lockGroupAndBackends_(action, params.property, params.name, 
+                                           false, next);
             },
             function (result, next) { // Read current status of the group
                 logger.done(result);
@@ -1111,7 +1121,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.start('Sending notification to loadbalancers to remove' +
                              ' the group ' + params.name);
                              
-                self.updateLoadBalancers_(action, group, log, tag, next);
+                self.updateLoadBalancers_(action, params.property, group, log, 
+                                          tag, next);
             }
         ], function (error, result) {
             self.unlockGroupAndBackends_(action, locks, function () {
@@ -1211,7 +1222,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 logger.start('Acquiring the operation lock for group ' +
                              params.name);
              
-                self.lockGroupAndBackends_(action, params.name, false, next);
+                self.lockGroupAndBackends_(action, params.property, params.name, 
+                                           false, next);
             },
             function (result, next) { // Query the current status
                 logger.done(result);
@@ -1301,7 +1313,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                              (params.pause ? 'pausing' : 'resuming') +
                              ' group ' + params.name);
                 
-                self.updateLoadBalancers_(action, group, log, tag, next);
+                self.updateLoadBalancers_(action, params.property, group, log, 
+                                          tag, next);
             }
         ], function (error, result) {
             self.unlockGroupAndBackends_(action, locks, function () {
@@ -1337,8 +1350,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      *                            The signature of the callback function is
      *                            'function (error, backends) {}'
      */
-    GroupHandler.prototype.allocateBackends_ = function (action, isp, scale, 
-                                                         callback) {
+    GroupHandler.prototype.allocateBackends_ = function (action, propery, isp, 
+                                                         scale, callback) {
         var self = this,
             logger = C.logging.getStepLogger(this.logger_),
             allocated = null,
@@ -1353,7 +1366,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 
                 action.data = { criteria: {
                     includes: { '$all': [
-                        'property.weibo.mastersite.variants',
+                        'property.' + property + '.backend',
                         'isp.' + isp
                     ]},
                     type: 'node'
@@ -1394,7 +1407,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 
                 logger.start('Reading all groups belong to ISP ' + isp);
                 action.data = { 
-                    criteria: { isp: isp }, 
+                    criteria: { isp: isp, property: property }, 
                     fields: { backends: 1 }
                 };
                 action.acquire('data.publishing.group.read', next);
@@ -1526,6 +1539,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      *
      * @method lockGroupAndBackends_
      * @param {Action} action the action trigger this locking
+     * @param {String} property the property which owes the group
      * @param {String} name the group name to be locked
      * @param {Boolean} both whether the both group and backends are locked, or
      *                       only specified group is locked.
@@ -1535,7 +1549,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      *                            The signature of the callback function is
      *                            'function (error, locks) {}'
      */
-    GroupHandler.prototype.lockGroupAndBackends_ = function (action, name, both, 
+    GroupHandler.prototype.lockGroupAndBackends_ = function (action, property, 
+                                                             name, both, 
                                                              callback) {
         var self = this,
             logger = C.logging.getStepLogger(this.logger_),
@@ -1555,7 +1570,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 }
 
                 logger.start('Acquiring the lock on the backend servers');
-                self.lock_(action, 'publishing.backend', next);
+                self.lock_(action, 'publishing.backend.' + property, next);
             }
         ], function (error, result) {
             if (error) {
@@ -1568,7 +1583,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
             
             if (both) {
                 logger.done(result);
-                locks['publishing.backend'] = result;
+                locks['publishing.backend.' + property] = result;
             }
             
             callback(null, locks);
@@ -1707,6 +1722,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      *
      * @method updateLoadBalancers_
      * @param {Action} action the action trigger this update
+     * @param {String} property the property that owns this group
      * @param {Object} group the group configurations for whose backends are
      *                       to be updated
      * @param {Object} log the operation log object
@@ -1718,7 +1734,8 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      *                            The signature of the callback function is
      *                            'function (error) {}'
      */
-    GroupHandler.prototype.updateLoadBalancers_ = function (action, group, log, 
+    GroupHandler.prototype.updateLoadBalancers_ = function (action, property, 
+                                                            group, log, 
                                                             tag, callback) {
         var self = this,
             logger = C.logging.getStepLogger(this.logger_);
@@ -1732,7 +1749,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 action.data = { criteria: {
                     includes: { '$all': [
                         // TODO: replace 'weibo.mastersite' with action.data.property
-                        'property.weibo.mastersite.loadbalancer',
+                        'property.' + property + '.loadbalancer',
                         'isp.' + group.isp
                     ]},
                     type: 'node'
