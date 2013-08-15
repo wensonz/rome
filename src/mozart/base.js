@@ -541,7 +541,7 @@ Condotti.add('caligula.components.orchestration.base', function (C) {
      */
     OrchestrationHandler.prototype.onKafkaConsumerOffset_ = function (partition,
                                                                       offset) {
-        this.logger_.debug('New offset arrived: ' + offset);
+        // this.logger_.debug('New offset arrived: ' + offset);
         this.offset_ = offset || 0;
     };
     
