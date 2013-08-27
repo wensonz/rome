@@ -92,7 +92,7 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
         logger.done(isp);
         
         action.data = {
-            criteria: { isp: isp, proeprty: property }
+            criteria: { isp: isp, property: property }
         };
         
         logger.start('Querying the group belongs to ISP ' + isp);
