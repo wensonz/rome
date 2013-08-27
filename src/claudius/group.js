@@ -1350,7 +1350,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
      *                            The signature of the callback function is
      *                            'function (error, backends) {}'
      */
-    GroupHandler.prototype.allocateBackends_ = function (action, propery, isp, 
+    GroupHandler.prototype.allocateBackends_ = function (action, property, isp, 
                                                          scale, callback) {
         var self = this,
             logger = C.logging.getStepLogger(this.logger_),
