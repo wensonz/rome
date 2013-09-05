@@ -1162,7 +1162,7 @@ Condotti.add('caligula.components.publishing.group', function (C) {
                 'params.name': params.name,
                 'operator': 'publish',
                 'status': { '$exists': true },
-                'status.state': GroupState.OK
+                'status.state': GroupState.DONE
             },
             fields: {
                 params: 1

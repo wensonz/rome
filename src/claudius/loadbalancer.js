@@ -196,6 +196,7 @@ Condotti.add('caligula.components.publishing.loadbalancer', function (C) {
                     case 'IP-RANGE': // TODO: rename to 'GEO'
                         mapping.geo.push({
                             group: key,
+                            city: group.strategy.city,
                             upstream: group.name
                         });
                         strategies.geo.push({
